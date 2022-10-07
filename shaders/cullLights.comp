@@ -1,0 +1,149 @@
+#version 460
+
+layout (local_size_x = 64) in;
+
+struct ShadowMapData {
+	float shadowMapX;		// 1 = 1 tile, 1024 pixels
+	float shadowMapY;		// 1 = 1 tile, 1024 pixels
+	float shadowMapSize;	// 1 = 1024  x 1024 pixels
+};
+
+struct PointLight {
+	vec3 lightPos;
+	mat4 lightSpaceMatrix[6]; // do i need this?
+
+	vec3 lightColor;
+	vec3 ambientColor;
+
+	float radius;
+	float farPlane;
+
+	ShadowMapData shadowMapData[6]; // move to using int index
+};
+
+struct DirLight {
+	vec3 lightPos;
+	vec3 lightDir;
+	mat4 lightSpaceMatrix;
+	
+	vec3 lightColor;
+	vec3 ambientColor;
+
+	ShadowMapData shadowMapData;
+};
+
+//all directional lights
+layout(std140,set = 1, binding = 1) readonly buffer DirLightBuffer {
+	int count;
+	DirLight lights[];
+} dirLightBuffer;
+
+//all point lights
+layout(std140,set = 1, binding = 2) readonly buffer PointLightBuffer {
+	int count;
+	PointLight lights[];
+} pointLightBuffer;
+
+// Output
+
+struct ActiveLight {
+	uint type;
+	uint index;
+};
+
+layout(std140,set = 1, binding = 4) buffer activeLightBuffer {
+	uint count;
+	ActiveLight lights[];
+} activeLights;
+
+layout(set = 2, binding = 0) uniform sampler depthSampler;
+layout(set = 2, binding = 2) uniform texture2D sampledPyramid;
+
+layout (push_constant) uniform PushConstants {
+	mat4 viewMatrix;
+	float frustum[4];
+	float P00;
+	float P11;
+	float zNear;
+	float zFar;
+} consts;
+
+bool frustumCull(vec3 pos, float radius, float frustum[4]);
+bool occlusionCull(vec3 pos, float radius);
+bool projectSphere(vec3 C, float r, float znear, float P00, float P11, out vec4 aabb);
+
+void main() {
+	uint gID = gl_GlobalInvocationID.x;
+
+	if(gID < pointLightBuffer.count) {
+
+		PointLight light = pointLightBuffer.lights[gID];
+
+		vec3 pos = (consts.viewMatrix * vec4(light.lightPos, 1.0)).rgb;
+
+		bool visible = true;
+
+		visible = visible && frustumCull(pos, light.radius, consts.frustum);
+
+		visible = visible && (true || occlusionCull(pos, light.radius));
+		
+		if (visible) {
+			uint index = atomicAdd(activeLights.count, 1);
+			activeLights.lights[index] = ActiveLight(1, gID);
+		}
+	}
+}
+
+bool frustumCull(vec3 pos, float radius, float frustum[4]) {
+	// the left/top/right/bottom plane culling utilizes frustum symmetry to cull against two planes at the same time
+	// idk how this works but maybe one day i'll understand what that means lol
+	bool visible = pos.z * frustum[1] - abs(pos.x) * frustum[0] > -radius;
+	visible = visible && pos.z * frustum[3] - abs(pos.y) * frustum[2] > -radius;
+
+	return visible;
+}
+
+// TODO: make this work lol
+bool occlusionCull(vec3 pos, float radius) {
+	pos.y *= -1;
+
+	vec4 aabb;
+	if (projectSphere(pos, radius, consts.zNear, consts.P00, consts.P11, aabb)) {
+		// return true;
+		float width = (aabb.z - aabb.x) * 1024;
+		float height = (aabb.w - aabb.y) * 512;
+
+		//find the mipmap level that will match the screen size of the sphere
+		float level = floor(log2(max(width, height)));
+
+		//sample the depth pyramid at that specific level
+		float depth = textureLod(sampler2D(sampledPyramid, depthSampler), (aabb.xy + aabb.zw) * 0.5, level).x;
+
+		float depthSphere = consts.zNear / (pos.z - radius);
+
+		//if the depth of the sphere is in front of the depth pyramid value, then the object is visible
+		return depthSphere >= depth;
+	}
+	return false;
+}
+
+// 2D Polyhedral Bounds of a Clipped, Perspective-Projected 3D Sphere. Michael Mara, Morgan McGuire. 2013
+bool projectSphere(vec3 C, float r, float znear, float P00, float P11, out vec4 aabb) {
+	// if (C.z < r + znear)
+	// 	return false;
+
+	vec2 cx = -C.xz;
+	vec2 vx = vec2(sqrt(dot(cx, cx) - r * r), r);
+	vec2 minx = mat2(vx.x, vx.y, -vx.y, vx.x) * cx;
+	vec2 maxx = mat2(vx.x, -vx.y, vx.y, vx.x) * cx;
+			
+	vec2 cy = -C.yz;
+	vec2 vy = vec2(sqrt(dot(cy, cy) - r * r), r);
+	vec2 miny = mat2(vy.x, vy.y, -vy.y, vy.x) * cy;
+	vec2 maxy = mat2(vy.x, -vy.y, vy.y, vy.x) * cy;
+
+	aabb = vec4(minx.x / minx.y * P00, miny.x / miny.y * P11, maxx.x / maxx.y * P00, maxy.x / maxy.y * P11);
+	aabb = aabb.xwzy * vec4(0.5f, -0.5f, 0.5f, -0.5f) + vec4(0.5f); // clip space -> uv space
+
+	return true;
+}

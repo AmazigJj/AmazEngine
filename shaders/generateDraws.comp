@@ -1,0 +1,55 @@
+#version 460
+
+layout (local_size_x = 64) in;
+
+//	.indexCount = static_cast<uint32_t>(draw.mesh->_indices.size()),
+//	.instanceCount = 1,
+//	.firstIndex = 0,
+//	.vertexOffset = 0,
+//	.firstInstance = i
+struct IndirectDraw {
+	uint indexCount;
+	uint instanceCount;
+	uint firstIndex;
+    uint vertexOffset;
+    uint firstInstance;
+};
+
+// TODO: update elsewhere
+struct ObjectData{
+	mat4 model;
+	uint materialIndex;
+	uint indexOffset;
+	uint indexCount;
+	uint vertexOffset;
+};
+
+//all object matrices
+layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer {
+	uint count;
+	ObjectData objects[];
+} objectBuffer;
+
+layout(std140,set = 2, binding = 0) buffer IndirectDrawsBuffer {
+	uint count;
+	IndirectDraw draws[];
+} indirectDraws;
+
+void main() {
+	uint gID = gl_GlobalInvocationID.x;
+
+	if(gID < objectBuffer.count) {
+		ObjectData object = objectBuffer.objects[gID];
+
+		// TODO: actually cull lol
+
+		uint index = atomicAdd(indirectDraws.count, 1);
+		indirectDraws.draws[index] = IndirectDraw(
+			object.indexCount,
+			1,
+			objects.indexOffset,
+			object.vertexOffset,
+			gID
+		);
+	}
+}

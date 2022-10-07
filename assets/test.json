@@ -1,0 +1,352 @@
+{
+	"version": 0,
+	"scene": {
+		"meshes": [
+			{
+				"name": "test",
+				"renderMesh": "test.obj",
+				"collisonMesh": "test.obj",
+				"offset": [0, 0, 0]
+			},
+			{
+				"name": "test2",
+				"renderMesh": "test.obj",
+				"collisonMesh": "test.obj",
+				"offset": [0, 0, 30]
+			},
+			{
+				"name": "test3",
+				"renderMesh": "test.obj",
+				"collisonMesh": "test.obj",
+				"offset": [0, 0, -30]
+			}
+
+		],
+		"lights": [
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12.1
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12.2
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12.3
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12.4
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12.5
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12.6
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12.7
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12.8
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12.9
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 13
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			},
+			{
+				"type": 0,
+				"pos": [ 0, 5, 0 ],
+				"rgb": [ 255, 200, 0 ],
+				"light": {
+					"radius": 12
+				}
+			}
+			
+		],
+		"spawnPoints": [
+
+		]
+	}
+}

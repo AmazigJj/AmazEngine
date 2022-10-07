@@ -1,0 +1,226 @@
+#version 460
+layout (local_size_x = 16, local_size_y = 8, local_size_z = 1) in;
+
+struct ShadowMapData {
+	float shadowMapX;		// 1 = 1 tile, 1024 pixels
+	float shadowMapY;		// 1 = 1 tile, 1024 pixels
+	float shadowMapSize;	// 1 = 1024  x 1024 pixels
+};
+
+struct PointLight {
+	vec3 lightPos;
+	mat4 lightSpaceMatrix[6]; // do i need this?
+
+	vec3 lightColor;
+	vec3 ambientColor;
+
+	float radius;
+	float farPlane;
+
+	ShadowMapData shadowMapData[6]; // move to using int index
+};
+
+struct DirLight {
+	vec3 lightPos;
+	vec3 lightDir;
+	mat4 lightSpaceMatrix;
+	
+	vec3 lightColor;
+	vec3 ambientColor;
+
+	ShadowMapData shadowMapData;
+};
+
+//all directional lights
+layout(std140,set = 1, binding = 1) readonly buffer DirLightBuffer {
+	int count;
+	DirLight lights[];
+} dirLightBuffer;
+
+//all point lights
+layout(std140,set = 1, binding = 2) readonly buffer PointLightBuffer {
+	int count;
+	PointLight lights[];
+} pointLightBuffer;
+
+struct ActiveLight {
+	uint type;
+	uint index;
+};
+
+layout(std140,set = 1, binding = 4) buffer activeLightBuffer {
+	uint count;
+	ActiveLight lights[];
+} activeLights;
+
+struct Cluster {   // A cluster volume is represented using an AABB
+   vec3 minPoint;
+   vec3 maxPoint;
+   uint index;
+   uint count;
+};
+
+layout(std140,set = 1, binding = 5) buffer clusterLightBuffer {
+	Cluster clusters[];
+};
+
+layout(std140,set = 1, binding = 6) buffer lightIndexBuffer {
+	uint count;
+	uint indices[];
+} lightIndices;
+
+layout( push_constant ) uniform PushConstants {
+	bool findClusters;
+	float zNear, zFar;
+	mat4 viewMatrix;
+	mat4 inverseMatrix; // Needed if findClusters == true
+} consts;
+
+// test light vs cluster functions
+bool testSphereAABB(vec3 pos, float radius, vec3 aabbMin, vec3 aabbMax);
+float sqDistPointAABB(vec3 point, vec3 aabbMin, vec3 aabbMax);
+
+// finding clusters functions
+void findCluster(uint clusterIndex, vec3 clusterPos);
+vec4 screenToView(vec4 screen, mat4 inverseProjection);
+vec3 lineIntersectionToZPlane(vec3 A, vec3 B, float zDistance);
+
+
+const int MAX_CLUSTER_LIGHTS = 64;
+
+void main() {
+
+	uint clusterIndex =	(gl_GlobalInvocationID.x) + 
+						(gl_GlobalInvocationID.y * 16) + 
+						(gl_GlobalInvocationID.z * 16 * 8);
+
+	if (consts.findClusters) {
+		vec3 clusterPos = vec3(	gl_GlobalInvocationID.x / 16,
+						gl_GlobalInvocationID.y / 8,
+						gl_GlobalInvocationID.z / 24);
+		findCluster(clusterIndex, clusterPos);
+	}
+
+	Cluster cluster = clusters[clusterIndex];
+
+	// TODO: occlusion cull cluster?
+
+	int clusterLightCount = 0;
+	int clusterLights[MAX_CLUSTER_LIGHTS];
+
+	for (int i = 0; i < activeLights.count && clusterLightCount <= MAX_CLUSTER_LIGHTS; i++) {
+		ActiveLight activeLight = activeLights.lights[i];
+
+		if (activeLight.type == 1){
+			PointLight light = pointLightBuffer.lights[activeLight.index];
+
+			vec3 pos = (consts.viewMatrix * vec4(light.lightPos, 1.0)).rgb;
+
+			if (testSphereAABB(pos, light.radius, cluster.maxPoint, cluster.minPoint)) {
+				clusterLights[clusterLightCount] = i;
+				clusterLightCount++;
+			}
+		}
+	}
+
+	clusters[clusterIndex].count = clusterLightCount;
+	if (clusterLightCount > 0) {
+		uint index = atomicAdd(lightIndices.count, clusterLightCount);
+		clusters[clusterIndex].index = index;
+
+		for (int i = 0; i < clusterLightCount; i++) {
+			lightIndices.indices[i + index] = clusterLights[i];
+		}
+	}
+}
+
+//Checking for intersection given a cluster AABB and a sphere
+bool testSphereAABB(vec3 pos, float radius, vec3 aabbMin, vec3 aabbMax) {
+    float sqDist = sqDistPointAABB(pos, aabbMin, aabbMax);
+
+    return sqDist <= (radius * radius);
+}
+
+float sqDistPointAABB(vec3 point, vec3 aabbMin, vec3 aabbMax){
+
+	float sqDist = 0;
+
+	for (int i = 0; i < 3; i++) {
+		if(point[i] < aabbMin[i]) {
+			sqDist += (aabbMin[i] - point[i]) * (aabbMin[i] - point[i]);
+		} else if (point[i] > aabbMax[i]) {
+			sqDist += (point[i] - aabbMax[i]) * (point[i] - aabbMax[i]);
+		}
+	}
+
+	return sqDist;
+}
+
+
+
+// Based on https://github.com/Angelo1211/HybridRenderingEngine/blob/master/assets/shaders/ComputeShaders/clusterShader.comp
+//			(http://www.aortiz.me/2018/12/21/CG.html#building-a-cluster-grid)
+void findCluster(uint clusterIndex, vec3 clusterPos) {
+	const vec3 eyePos = vec3(0.0);
+
+	//Calculating the min and max point in screen space
+	vec3 clusterMin = clusterPos;
+	vec3 clusterMax = clusterPos + vec3(1/16, 1/8, 1/24);
+
+	//Pass min and max to view space
+	vec3 minPoint = screenToView(vec4(clusterMin.xy, -1.0, 1.0), consts.inverseMatrix).xyz;
+	vec3 maxPoint = screenToView(vec4(clusterMax.xy, -1.0, 1.0), consts.inverseMatrix).xyz;
+
+	//Near and far values of the cluster in view space
+    //We use equation (2) directly to obtain the tile values
+	float tileNear  = -consts.zNear * pow(consts.zFar/consts.zNear, clusterMin.z/24.0);
+    float tileFar   = -consts.zNear * pow(consts.zFar/consts.zNear, clusterMax.z/24.0);
+
+	//Finding the 4 intersection points made from each point to the cluster near/far plane
+	vec3 minPointNear = lineIntersectionToZPlane(eyePos, minPoint, tileNear);
+    vec3 minPointFar  = lineIntersectionToZPlane(eyePos, minPoint, tileFar);
+    vec3 maxPointNear = lineIntersectionToZPlane(eyePos, maxPoint, tileNear);
+    vec3 maxPointFar  = lineIntersectionToZPlane(eyePos, maxPoint, tileFar);
+
+	vec3 minPointAABB = min(min(minPointNear, minPointFar),min(maxPointNear, maxPointFar));
+    vec3 maxPointAABB = max(max(minPointNear, minPointFar),max(maxPointNear, maxPointFar));
+
+	//Saving the AABB at the tile linear index
+    //Cluster is just a SSBO made of a struct of 2 vec4's
+	clusters[clusterIndex].minPoint  = minPointAABB;
+    clusters[clusterIndex].maxPoint  = maxPointAABB;
+}
+
+//Changes a points coordinate system from screen space to view space
+vec4 screenToView(vec4 screen, mat4 inverseProjection){
+
+    //Convert to clipSpace
+    vec4 clip = vec4(vec2(screen.x, 1.0 - screen.y)* 2.0 - 1.0, screen.z, screen.w);
+
+    //View space transform
+    vec4 view = inverseProjection * clip;
+
+    //Perspective projection
+    view = view / view.w;
+
+    return view;
+}
+
+//Creates a line segment from the eye to the screen point, then finds its intersection
+//With a z oriented plane located at the given distance to the origin
+vec3 lineIntersectionToZPlane(vec3 A, vec3 B, float zDistance){
+
+    //all clusters planes are aligned in the same z direction
+    vec3 normal = vec3(0.0, 0.0, 1.0);
+
+    //getting the line from the eye to the tile
+    vec3 ab =  B - A;
+
+    //Computing the intersection length for the line and the plane
+    float t = (zDistance - dot(normal, A)) / dot(normal, ab);
+
+    //Computing the actual xyz position of the point along the line
+    vec3 result = A + t * ab;
+
+    return result;
+}

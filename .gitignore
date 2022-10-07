@@ -1,0 +1,16 @@
+.vs/
+out/
+vc140.pdb
+CMakeSettings.json
+
+.vscode/
+.cache/
+build/
+build-linux/
+cmake/
+
+assets/*
+!assets/CMakeLists.txt
+!assets/test.json
+!assets/test.obj
+!assets/test.mtl

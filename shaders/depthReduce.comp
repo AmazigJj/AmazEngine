@@ -1,0 +1,27 @@
+#version 450
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform sampler depthSampler;
+layout(set = 0, binding = 1) uniform texture2D depthBuffer;
+layout(set = 0, binding = 2) uniform texture2D sampledPyramid;
+layout(set = 0, binding = 3, r32f) uniform writeonly image2D storagePyramid[11]; 
+
+layout(push_constant) uniform block {
+	uint index;
+	vec2 imageSize;
+};
+
+void main() {
+	uvec2 pos = gl_GlobalInvocationID.xy;
+
+	// Sampler is set up to do min reduction, so this computes the minimum depth of a 2x2 texel quad
+	float depth;
+	if (index == 0){
+		depth = texture(sampler2D(depthBuffer, depthSampler), (vec2(pos) + vec2(0.5)) / imageSize).x;
+	} else {
+		depth = textureLod(sampler2D(sampledPyramid, depthSampler), (vec2(pos) + vec2(0.5)) / imageSize, index - 1).x;
+	}
+
+	imageStore(storagePyramid[index], ivec2(pos), vec4(depth));
+}
