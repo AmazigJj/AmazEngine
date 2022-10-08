@@ -141,24 +141,24 @@ struct ShaderStageInfo {
 	VkShaderModule module;
 };
 
-class PipelineBuilder {
-public:
+// class PipelineBuilder {
+// public:
 
-	std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
-	VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
-	VkPipelineInputAssemblyStateCreateInfo _inputAssembly;
-	VkViewport _viewport;
-	VkRect2D _scissor;
-	VkPipelineRasterizationStateCreateInfo _rasterizer;
-	VkPipelineColorBlendAttachmentState _colorBlendAttachment;
-	VkPipelineMultisampleStateCreateInfo _multisampling;
-	VkPipelineLayout _pipelineLayout;
+// 	std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
+// 	VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
+// 	VkPipelineInputAssemblyStateCreateInfo _inputAssembly;
+// 	VkViewport _viewport;
+// 	VkRect2D _scissor;
+// 	VkPipelineRasterizationStateCreateInfo _rasterizer;
+// 	VkPipelineColorBlendAttachmentState _colorBlendAttachment;
+// 	VkPipelineMultisampleStateCreateInfo _multisampling;
+// 	VkPipelineLayout _pipelineLayout;
 
-	VkPipelineDepthStencilStateCreateInfo _depthStencil;
+// 	VkPipelineDepthStencilStateCreateInfo _depthStencil;
 
-	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass, bool colorBlendingEnabled = true);
-	PipelineBuilder& addShader(ShaderStageInfo shader);
-};
+// 	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass, bool colorBlendingEnabled = true);
+// 	PipelineBuilder& addShader(ShaderStageInfo shader);
+// };
 
 struct IndirectBatch {
 	Mesh* mesh;

@@ -65,36 +65,62 @@ public:
 	VkPrimitiveTopology _topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // TODO: replace with our own topology enum
 	VkViewport _viewport;
 	VkRect2D _scissor;
+
 	//VkPipelineRasterizationStateCreateInfo _rasterizer;
-	bool _clampDepth = false;
+	CullingMode _cullMode = CullingMode::NONE;
+	PrimitiveFacing _facing = PrimitiveFacing::COUNTER_CLOCKWISE;
+	
 	bool _rasterizerDiscard = false;
 	bool _wireFrame = false;
-	PrimitiveFacing _facing = PrimitiveFacing::COUNTER_CLOCKWISE;
-	CullingMode _cullMode = CullingMode::NONE;
+
 	bool _depthBias = false;
 	float _depthBiasConstant = 0.f;
 	float _depthBiasClamp = 0.f;
 	float _depthBiasSlope = 0.f;
 
-	DynamicPipelineState _dynamicState;
+	bool _clampDepth = false;
+
+	DynamicPipelineState _dynamicState = 0;
 	
-	VkPipelineColorBlendAttachmentState _colorBlendAttachment;
-	//VkPipelineMultisampleStateCreateInfo _multisampling;
-	MSAASamples _samples;
-	bool _sampleShading;
-	float _minSampleShading;
+	float _colorBlend = false;
+
+	MSAASamples _samples = MSAASamples::ONE;
+	bool _sampleShading = false;
+	float _minSampleShading = 0;
 
 	VkPipelineLayout _pipelineLayout;
 
 	VkPipelineDepthStencilStateCreateInfo _depthStencil;
 
-	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass, bool colorBlendingEnabled = true);
+	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
+
 	PipelineBuilder& addShader(ShaderStageInfo shader);
+	PipelineBuilder& clearShaders();
+	PipelineBuilder& setVertexInput(VkPipelineVertexInputStateCreateInfo info);
 	PipelineBuilder& setTopology(VkPrimitiveTopology topology);
+	PipelineBuilder& setViewport(VkViewport viewport);
+	PipelineBuilder& setScissor(VkRect2D scissor);
 	PipelineBuilder& setCullmode(CullingMode mode);
+	PipelineBuilder& setFacing(PrimitiveFacing facing);
+	PipelineBuilder& enableRasterizerDiscard();
+	PipelineBuilder& disableRasterizerDiscard();
+	PipelineBuilder& enableWireframe();
+	PipelineBuilder& disableWireframe();
+	PipelineBuilder& enableDepthBias(float depthBiasConstant, float depthBiasSlope, float depthBiasClamp);
+	PipelineBuilder& disableDepthBias();
+	PipelineBuilder& enableDepthClamp();
+	PipelineBuilder& disableDepthClamp();
 	PipelineBuilder& addDynamicState(DynamicPipelineState mode);
 	PipelineBuilder& removeDynamicState(DynamicPipelineState mode);
 	PipelineBuilder& clearDynamicState();
+	PipelineBuilder& enableColorBlending();
+	PipelineBuilder& disableColorBlending();
+	PipelineBuilder& setMSAASamples(MSAASamples samples);
+	PipelineBuilder& enableSampleShading(float minSampleShading);
+	PipelineBuilder& disableSampleShading();
+	PipelineBuilder& setLayout(VkPipelineLayout layout);
+	PipelineBuilder& setDepthStencilInfo(VkPipelineDepthStencilStateCreateInfo depthStencil);
+
 };
 
 }

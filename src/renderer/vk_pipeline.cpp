@@ -4,7 +4,7 @@
 
 namespace amaz::eng {
 
-	VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass, bool colorBlendingEnabled) {
+	VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass) {
 		//make viewport state from our stored viewport and scissor.
 		//at the moment we won't support multiple viewports or scissors
 		VkPipelineViewportStateCreateInfo viewportState = {
@@ -17,9 +17,15 @@ namespace amaz::eng {
 			.pScissors = &_scissor
 		};
 
+		// TODO: add blending support
+		VkPipelineColorBlendAttachmentState colorBlendAttachment {
+			.blendEnable = VK_FALSE,
+			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | 
+				VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+		};
+
 		//setup dummy color blending. We aren't using transparent objects yet
 		//the blending is just "no blend", but we do write to the color attachment
-		// TODO: option for this
 		VkPipelineColorBlendStateCreateInfo colorBlending = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
 			.pNext = nullptr,
@@ -27,7 +33,7 @@ namespace amaz::eng {
 			.logicOpEnable = VK_FALSE,
 			.logicOp = VK_LOGIC_OP_COPY,
 			.attachmentCount = 1,
-			.pAttachments = &_colorBlendAttachment
+			.pAttachments = &colorBlendAttachment
 		};
 
 		std::vector<VkDynamicState> dynamicStates;
@@ -58,7 +64,8 @@ namespace amaz::eng {
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 				.pNext = nullptr,
 				.stage = (VkShaderStageFlagBits)shader.stage,
-				.module = shader.module
+				.module = shader.module,
+				.pName = "main"
 			});
 		}
 
@@ -117,12 +124,6 @@ namespace amaz::eng {
 			.basePipelineHandle = VK_NULL_HANDLE
 		};
 
-
-		if (colorBlendingEnabled) {
-			pipelineInfo.pColorBlendState = &colorBlending;
-		}
-
-		//it's easy to error out on create graphics pipeline, so we handle it a bit better than the common VK_CHECK case
 		VkPipeline newPipeline;
 		if (vkCreateGraphicsPipelines(
 			device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS) {
@@ -135,6 +136,142 @@ namespace amaz::eng {
 	PipelineBuilder& PipelineBuilder::addShader(ShaderStageInfo shader) {
 		_shaderStages.push_back(shader);
 		return *this;
-	};
+	}
+
+	PipelineBuilder& PipelineBuilder::clearShaders() {
+		_shaderStages.clear();
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::setVertexInput(VkPipelineVertexInputStateCreateInfo info) {
+		_vertexInputInfo = info;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::setTopology(VkPrimitiveTopology topology) {
+		_topology = topology;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::setViewport(VkViewport viewport) {
+		_viewport = viewport;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::setScissor(VkRect2D scissor) {
+		_scissor = scissor;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::setCullmode(CullingMode mode) {
+		_cullMode = mode;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::setFacing(PrimitiveFacing facing) {
+		_facing = facing;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::enableRasterizerDiscard() {
+		_rasterizerDiscard = true;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::disableRasterizerDiscard() {
+		_rasterizerDiscard = false;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::enableWireframe() {
+		_wireFrame = true;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::disableWireframe() {
+		_wireFrame = false;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::enableDepthBias(float depthBiasConstant, float depthBiasSlope, float depthBiasClamp) {
+		_depthBias = true;
+		_depthBiasConstant = depthBiasConstant;
+		_depthBiasSlope = depthBiasSlope;
+		_depthBiasClamp = depthBiasClamp;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::disableDepthBias() {
+		_depthBias = false;
+		_depthBiasConstant = 0;
+		_depthBiasSlope = 0;
+		_depthBiasClamp = 0;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::enableDepthClamp() {
+		_clampDepth = true;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::disableDepthClamp() {
+		_clampDepth = false;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::addDynamicState(DynamicPipelineState mode) {
+		_dynamicState = _dynamicState | mode;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::removeDynamicState(DynamicPipelineState mode) {
+		_dynamicState = _dynamicState & ~mode;
+		return *this;
+	}
+	
+	PipelineBuilder& PipelineBuilder::clearDynamicState() {
+		_dynamicState = 0;
+		return *this;
+	}
+
+	// note: color blending is currently not implemented
+	PipelineBuilder& PipelineBuilder::enableColorBlending() {
+		std::cout << "Color blending enabled for pipeline, but color blending is not currently implemented";
+		_colorBlend = true;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::disableColorBlending() {
+		_colorBlend = false;
+		return *this;
+	}
+
+
+	PipelineBuilder& PipelineBuilder::setMSAASamples(MSAASamples samples) {
+		_samples = samples;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::enableSampleShading(float minSampleShading) {
+		_sampleShading = true;
+		_minSampleShading = minSampleShading;
+		return *this;
+	}
+	PipelineBuilder& PipelineBuilder::disableSampleShading() {
+		_sampleShading = true;
+		_minSampleShading = 0;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::setLayout(VkPipelineLayout layout) {
+		_pipelineLayout = layout;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::setDepthStencilInfo(VkPipelineDepthStencilStateCreateInfo depthStencil) {
+		_depthStencil = depthStencil;
+		return *this;
+	}
 
 }
+

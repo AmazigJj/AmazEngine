@@ -9,6 +9,7 @@
 #include <exception>
 #include "vk_descriptor.h"
 #include <sstream>
+#include "vk_pipeline.h"
 
 bool vsync = false;
 
@@ -1021,67 +1022,39 @@ void Renderer::initPipelines() {
 
 	vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &meshPipelineLayout);
 
-
 	VertexInputDescription vertexDescription = Vertex::get_vertex_description();
 
-	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
-	PipelineBuilder meshPipelineBuilder{
-		._shaderStages = {vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader),
-						vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader)},
-		._vertexInputInfo = vkinit::vertex_input_state_create_info(vertexDescription),
+	amaz::eng::PipelineBuilder meshPipelineBuilder;
+	meshPipelineBuilder.addShader({amaz::eng::ShaderStages::VERTEX, meshVertShader})
+		.addShader({amaz::eng::ShaderStages::FRAGMENT, triangleFragShader})
+		.setVertexInput(vkinit::vertex_input_state_create_info(vertexDescription))
+		.setTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+		.setViewport({0.0f, 0.0f, (float)_winSize.width, (float)_winSize.height, 0.0f, 1.0f})
+		.setScissor({{ 0, 0 },  {(uint32_t)_winSize.width, (uint32_t)_winSize.height}})
+		.setCullmode(amaz::eng::CullingMode::BACK)
+		.setFacing(amaz::eng::PrimitiveFacing::COUNTER_CLOCKWISE)
+		.disableRasterizerDiscard()
+		.disableWireframe()
+		.enableDepthBias(0, 0, 0)
+		.disableDepthClamp()
+		.addDynamicState(amaz::eng::DynamicPipelineState::DEPTH_BIAS | amaz::eng::DynamicPipelineState::SCISSOR | amaz::eng::DynamicPipelineState::VIEWPORT)
+		.disableColorBlending() // doesn't do anything currently
+		.setMSAASamples(amaz::eng::MSAASamples::ONE)
+		.disableSampleShading()
+		.setLayout(meshPipelineLayout)
+		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, false, VK_COMPARE_OP_GREATER_OR_EQUAL));
 
-		//input assembly is the configuration for drawing triangle lists, strips, or individual points.
-		//we are just going to draw triangle list
-		._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
-
-		//build viewport and scissor from the swapchain extents
-		._viewport = {0.0f, 0.0f, (float)_winSize.width, (float)_winSize.height, 0.0f, 1.0f},
-		._scissor = {{ 0, 0 },  (uint32_t)_winSize.width, (uint32_t)_winSize.height},
-
-		//configure the rasterizer to draw filled triangles
-		._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL),
-		//a single blend attachment with no blending and writing to RGBA
-		._colorBlendAttachment = vkinit::color_blend_attachment_state(),
-		//we don't use multisampling, so just run the default one
-		._multisampling = vkinit::multisampling_state_create_info(),
-
-
-		._pipelineLayout = meshPipelineLayout,
-		//default depthtesting
-		._depthStencil = vkinit::depth_stencil_create_info(true, false, VK_COMPARE_OP_GREATER_OR_EQUAL)
-	};
-
-
-	//build the mesh triangle pipeline
 	VkPipeline meshPipeline = meshPipelineBuilder.build_pipeline(_device, _mainRenderPass);
-
 	createMaterial(meshPipeline, meshPipelineLayout, "defaultmesh");
 
 	_prePassPipelineLayout = meshPipelineLayout;
-	PipelineBuilder prePassPipelineBuilder {
-		._shaderStages = {vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader)},
-		._vertexInputInfo = vkinit::vertex_input_state_create_info(vertexDescription),
-
-		//input assembly is the configuration for drawing triangle lists, strips, or individual points.
-		//we are just going to draw triangle list
-		._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
-
-		//build viewport and scissor from the swapchain extents
-		._viewport = {0.0f, 0.0f, (float)_winSize.width, (float)_winSize.height, 0.0f, 1.0f},
-		._scissor = {{ 0, 0 },  (uint32_t)_winSize.width, (uint32_t)_winSize.height},
-
-		//configure the rasterizer to draw filled triangles
-		._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL),
-		//a single blend attachment with no blending and writing to RGBA
-		._colorBlendAttachment = vkinit::color_blend_attachment_state(),
-		//we don't use multisampling, so just run the default one
-		._multisampling = vkinit::multisampling_state_create_info(),
 
 
-		._pipelineLayout = _prePassPipelineLayout,
-		//default depthtesting
-		._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL)
-	};
+	auto prePassPipelineBuilder = meshPipelineBuilder;
+	prePassPipelineBuilder.clearShaders()
+		.addShader({amaz::eng::ShaderStages::VERTEX, meshVertShader})
+		.setLayout(_prePassPipelineLayout)
+		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
 
 	_prePassPipeline = prePassPipelineBuilder.build_pipeline(_device, _prePassRenderPass);
 
@@ -1093,35 +1066,15 @@ void Renderer::initPipelines() {
 	VkPipelineLayout texturedPipeLayout;
 	vkCreatePipelineLayout(_device, &textured_pipeline_layout_info, nullptr, &texturedPipeLayout);
 
-	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
-	PipelineBuilder texturedPipelineBuilder{
-		._shaderStages = {vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader),
-						vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, texturedMeshShader)},
-		._vertexInputInfo = vkinit::vertex_input_state_create_info(vertexDescription),
-
-		//input assembly is the configuration for drawing triangle lists, strips, or individual points.
-		//we are just going to draw triangle list
-		._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
-
-		//build viewport and scissor from the swapchain extents
-		._viewport = {0.0f, 0.0f, (float)_winSize.width, (float)_winSize.height, 0.0f, 1.0f},
-		._scissor = {{ 0, 0 },  (uint32_t)_winSize.width, (uint32_t)_winSize.height},
-
-		//configure the rasterizer to draw filled triangles
-		._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL),
-		//a single blend attachment with no blending and writing to RGBA
-		._colorBlendAttachment = vkinit::color_blend_attachment_state(),
-		//we don't use multisampling, so just run the default one
-		._multisampling = vkinit::multisampling_state_create_info(),
-
-		._pipelineLayout = texturedPipeLayout,
-		//default depthtesting
-		._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL)
-	};
-
+	auto texturedPipelineBuilder = meshPipelineBuilder;
+	texturedPipelineBuilder.clearShaders()
+		.addShader({amaz::eng::ShaderStages::VERTEX, meshVertShader})
+		.addShader({amaz::eng::ShaderStages::FRAGMENT, texturedMeshShader})
+		.setLayout(texturedPipeLayout)
+		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
+	
 	VkPipeline texPipeline = texturedPipelineBuilder.build_pipeline(_device, _mainRenderPass);
 	createMaterial(texPipeline, texturedPipeLayout, "texturedmesh");
-
 
 	setLayouts = { _globalSetLayout, _objectSetLayout, _singleTextureSetLayout, _singleTextureSetLayout };
 
@@ -1131,31 +1084,12 @@ void Renderer::initPipelines() {
 	VkPipelineLayout specPipeLayout;
 	vkCreatePipelineLayout(_device, &spec_pipeline_layout_info, nullptr, &specPipeLayout);
 
-	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
-	PipelineBuilder specPipelineBuilder{
-		._shaderStages = { vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader),
-						vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, specularMapShader) },
-		._vertexInputInfo = vkinit::vertex_input_state_create_info(vertexDescription),
-
-		//input assembly is the configuration for drawing triangle lists, strips, or individual points.
-		//we are just going to draw triangle list
-		._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
-
-		//build viewport and scissor from the swapchain extents
-		._viewport = {0.0f, 0.0f, (float)_winSize.width, (float)_winSize.height, 0.0f, 1.0f},
-		._scissor = {{ 0, 0 },  (uint32_t)_winSize.width, (uint32_t)_winSize.height},
-
-		//configure the rasterizer to draw filled triangles
-		._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL),
-		//a single blend attachment with no blending and writing to RGBA
-		._colorBlendAttachment = vkinit::color_blend_attachment_state(),
-		//we don't use multisampling, so just run the default one
-		._multisampling = vkinit::multisampling_state_create_info(),
-
-		._pipelineLayout = specPipeLayout,
-		//default depthtesting
-		._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL)
-	};
+	auto specPipelineBuilder = meshPipelineBuilder;
+	specPipelineBuilder.clearShaders()
+		.addShader({amaz::eng::ShaderStages::VERTEX, meshVertShader})
+		.addShader({amaz::eng::ShaderStages::FRAGMENT, specularMapShader})
+		.setLayout(specPipeLayout)
+		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
 
 	VkPipeline specPipeline = specPipelineBuilder.build_pipeline(_device, _mainRenderPass);
 
@@ -1190,32 +1124,17 @@ void Renderer::initPipelines() {
 
 	vkCreatePipelineLayout(_device, &shadowPipelineLayoutCreateInfo, nullptr, &_shadowPipelineLayout);
 
-	PipelineBuilder shadowPipelineBuilder{
-		._shaderStages = {	vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, shadowVertShader),
-							vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, shadowFragShader)},
-		._vertexInputInfo = vkinit::vertex_input_state_create_info(vertexDescription),
+	auto shadowPipelineBuilder = meshPipelineBuilder;
+	shadowPipelineBuilder.clearShaders()
+		.addShader({amaz::eng::ShaderStages::VERTEX, shadowVertShader})
+		.addShader({amaz::eng::ShaderStages::FRAGMENT, shadowFragShader})
+		.setViewport({0.0f, 0.0f, (float)8192, (float)8192, 0.0f, 1.0f})
+		.setScissor({{ 0, 0 },  {(uint32_t)8192, (uint32_t)8192}})
+		.setCullmode(amaz::eng::CullingMode::FRONT)
+		.setLayout(_shadowPipelineLayout)
+		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL));
 
-		//input assembly is the configuration for drawing triangle lists, strips, or individual points.
-		//we are just going to draw triangle list
-		._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
-
-		//build viewport and scissor from the swapchain extents
-		._viewport = {0.0f, 0.0f, (float)8192, (float)8192, 0.0f, 1.0f},
-		._scissor = {{ 0, 0 },  (uint32_t)8192, (uint32_t)8192},
-
-		//configure the rasterizer to draw filled triangles
-		._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL, VK_CULL_MODE_FRONT_BIT),
-		
-		._colorBlendAttachment = vkinit::color_blend_attachment_state(),
-		//we don't use multisampling, so just run the default one
-		._multisampling = vkinit::multisampling_state_create_info(),
-
-		._pipelineLayout = _shadowPipelineLayout,
-		//default depthtesting
-		._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL)
-	};
-
-	_shadowPipeline = shadowPipelineBuilder.build_pipeline(_device, _shadowRenderPass, false);
+	_shadowPipeline = shadowPipelineBuilder.build_pipeline(_device, _shadowRenderPass);
 
 	VkShaderModule fullscreenVertShader;
 	if (!loadShaderModule("../shaders/fullscreen.vert.spv", fullscreenVertShader)) {
@@ -1246,36 +1165,30 @@ void Renderer::initPipelines() {
 
 	vkCreatePipelineLayout(_device, &tonemapPipelineLayoutCreateInfo, nullptr, &_tonemapPipelineLayout);
 
-	PipelineBuilder tonemapPipelineBuilder{
-		._shaderStages = {	vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, fullscreenVertShader),
-							vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, tonemapFragShader)},
-		._vertexInputInfo = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-			.vertexBindingDescriptionCount = 0,
-			.vertexAttributeDescriptionCount = 0,
-		},
+	amaz::eng::PipelineBuilder tonemapPipelineBuilder;
 
-		//input assembly is the configuration for drawing triangle lists, strips, or individual points.
-		//we are just going to draw triangle list
-		._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
+	tonemapPipelineBuilder.addShader({amaz::eng::ShaderStages::VERTEX, fullscreenVertShader})
+		.addShader({amaz::eng::ShaderStages::FRAGMENT, tonemapFragShader})
+		.setVertexInput({
+	 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+	 		.vertexBindingDescriptionCount = 0,
+	 		.vertexAttributeDescriptionCount = 0,
+	 	})
+		.setTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+		.setViewport({0.0f, 0.0f, (float)_winSize.width, (float)_winSize.height, 0.0f, 1.0f})
+		.setScissor({{ 0, 0 },  {(uint32_t)_winSize.width, (uint32_t)_winSize.height}})
+		.setCullmode(amaz::eng::CullingMode::NONE)
+		.disableRasterizerDiscard()
+		.disableWireframe()
+		.disableDepthBias()
+		.addDynamicState(amaz::eng::DynamicPipelineState::SCISSOR | amaz::eng::DynamicPipelineState::VIEWPORT)
+		.disableColorBlending()
+		.setMSAASamples(amaz::eng::MSAASamples::ONE)
+		.disableSampleShading()
+		.setLayout(_tonemapPipelineLayout)
+		.setDepthStencilInfo(vkinit::depth_stencil_create_info(false, false, VK_COMPARE_OP_GREATER_OR_EQUAL));
 
-		//build viewport and scissor from the swapchain extents
-		._viewport = {0.0f, 0.0f, (float)_winSize.width, (float)_winSize.height, 0.0f, 1.0f},
-		._scissor = {{ 0, 0 },  (uint32_t)_winSize.width, (uint32_t)_winSize.height},
-
-		//configure the rasterizer to draw filled triangles
-		._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE),
-		
-		._colorBlendAttachment = vkinit::color_blend_attachment_state(),
-		//we don't use multisampling, so just run the default one
-		._multisampling = vkinit::multisampling_state_create_info(),
-
-		._pipelineLayout = _tonemapPipelineLayout,
-		//default depthtesting
-		._depthStencil = vkinit::depth_stencil_create_info(false, false, VK_COMPARE_OP_GREATER_OR_EQUAL)
-	};
-
-	_tonemapPipeline = tonemapPipelineBuilder.build_pipeline(_device, _tonemapRenderPass, false);
+	_tonemapPipeline = tonemapPipelineBuilder.build_pipeline(_device, _tonemapRenderPass);
 
 	_mainFrameImagesSets = std::vector<VkDescriptorSet>(_swapchainImages.size());
 
@@ -1683,46 +1596,48 @@ void Renderer::registerMaterial(std::string matTemplate, std::string name, std::
 	//return _materials[name];
 }
 
-std::tuple< VkPipeline, VkPipelineLayout> Renderer::createPipeline(std::span<VkDescriptorSetLayout> setLayouts, std::span<VkPushConstantRange> pushConstants,
-	std::vector<VkPipelineShaderStageCreateInfo> shaderStages, VertexInputDescription vertexDescription) {
+// Commented out unused function, not sure what to do with this
+// std::tuple< VkPipeline, VkPipelineLayout> Renderer::createPipeline(std::span<VkDescriptorSetLayout> setLayouts, std::span<VkPushConstantRange> pushConstants,
+// 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages, VertexInputDescription vertexDescription) {
 
 
-	VkPipelineLayoutCreateInfo pipeline_layout_info =
-		vkinit::pipeline_layout_create_info(setLayouts, pushConstants);
+// 	VkPipelineLayoutCreateInfo pipeline_layout_info =
+// 		vkinit::pipeline_layout_create_info(setLayouts, pushConstants);
 
-	VkPipelineLayout pipeLayout;
-	vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &pipeLayout);
+// 	VkPipelineLayout pipeLayout;
+// 	vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &pipeLayout);
 
-	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
-	PipelineBuilder pipelineBuilder{
-		._shaderStages = shaderStages,
-		._vertexInputInfo = vkinit::vertex_input_state_create_info(vertexDescription),
+// 	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
+	
+// 	PipelineBuilder pipelineBuilder{
+// 		._shaderStages = shaderStages,
+// 		._vertexInputInfo = vkinit::vertex_input_state_create_info(vertexDescription),
 
-		//input assembly is the configuration for drawing triangle lists, strips, or individual points.
-		//we are just going to draw triangle list
-		._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
+// 		//input assembly is the configuration for drawing triangle lists, strips, or individual points.
+// 		//we are just going to draw triangle list
+// 		._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
 
-		//build viewport and scissor from the swapchain extents
-		._viewport = {0.0f, 0.0f, (float)_winSize.width, (float)_winSize.height, 0.0f, 1.0f},
-		._scissor = {{ 0, 0 },  (uint32_t)_winSize.width, (uint32_t)_winSize.height},
+// 		//build viewport and scissor from the swapchain extents
+// 		._viewport = {0.0f, 0.0f, (float)_winSize.width, (float)_winSize.height, 0.0f, 1.0f},
+// 		._scissor = {{ 0, 0 },  (uint32_t)_winSize.width, (uint32_t)_winSize.height},
 
-		//configure the rasterizer to draw filled triangles
-		._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL),
-		//a single blend attachment with no blending and writing to RGBA
-		._colorBlendAttachment = vkinit::color_blend_attachment_state(),
-		//we don't use multisampling, so just run the default one
-		._multisampling = vkinit::multisampling_state_create_info(),
+// 		//configure the rasterizer to draw filled triangles
+// 		._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL),
+// 		//a single blend attachment with no blending and writing to RGBA
+// 		._colorBlendAttachment = vkinit::color_blend_attachment_state(),
+// 		//we don't use multisampling, so just run the default one
+// 		._multisampling = vkinit::multisampling_state_create_info(),
 
-		._pipelineLayout = pipeLayout,
-		//default depthtesting
-		._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL)
-	};
+// 		._pipelineLayout = pipeLayout,
+// 		//default depthtesting
+// 		._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL)
+// 	};
 
-	VkPipeline pipeline = pipelineBuilder.build_pipeline(_device, _mainRenderPass);
+// 	VkPipeline pipeline = pipelineBuilder.build_pipeline(_device, _mainRenderPass);
 
-	return { pipeline, pipeLayout };
+// 	return { pipeline, pipeLayout };
 
-}
+// }
 
 void Renderer::initImgui() {
 
