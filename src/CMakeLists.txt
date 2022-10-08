@@ -9,7 +9,7 @@ message("VULKAN VERSION: " ${Vulkan_VERSION})
 
 target_link_libraries(AmazEngine PUBLIC Vulkan::Vulkan vk-bootstrap::vk-bootstrap glm::glm SDL2::SDL2 SDL2::SDL2main stb_image tinyobjloader VulkanMemoryAllocator imgui nlohmann_json::nlohmann_json tinygltf)
 
-add_dependencies(AmazEngine Shaders)
+add_dependencies(AmazEngine Shaders AmazEngineAssets)
 
 
 # VMA has tons of nullability-completeness warnings, unable to use SYSTEM on target_link_libararies for some reason

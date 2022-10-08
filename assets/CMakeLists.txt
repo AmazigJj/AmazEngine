@@ -8,9 +8,9 @@
 
 #set(ASSETS_MTL lost_empire.mtl monkey_flat.mtl monkey_smooth.mtl test.mtl)
 
-set(ASSETS_OBJ test.obj viking_room.obj dust2.obj)
-set(ASSETS_MTL test.mtl dust2.mtl)
-set(ASSETS_JSON test.json dust2.json)
-set(ASSETS_IMAGES viking_room.png)
+set(ASSETS_OBJ test.obj)
+set(ASSETS_MTL test.mtl)
+set(ASSETS_JSON test.json)
+set(ASSETS_IMAGES )
 
 add_assets(AmazEngineAssets ${ASSETS_IMAGES} ${ASSETS_OBJ} ${ASSETS_MTL} ${ASSETS_JSON})
