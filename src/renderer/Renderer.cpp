@@ -9,7 +9,7 @@
 #include <exception>
 #include "vk_descriptor.h"
 #include <sstream>
-#include "vk_pipeline.h"
+#include "PipelineBuilder.h"
 
 bool vsync = false;
 
