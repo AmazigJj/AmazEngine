@@ -7,7 +7,6 @@ CMakeSettings.json
 .cache/
 build/
 build-linux/
-cmake/
 
 assets/*
 !assets/CMakeLists.txt
