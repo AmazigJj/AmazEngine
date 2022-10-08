@@ -89,23 +89,6 @@ namespace amaz {
 			float z = (i % 2) ? nodes[nodeId].aabb.a.z : nodes[nodeId].aabb.b.z;	// 0, 2, 4, 6	1, 3, 5, 7
 			nodes.emplace_back(AABB{ midPoint, {x, y, z} });
 		}
-
-		/*int i = 0;
-		for (float x = nodes[nodeId].aabb.a.x;; x = nodes[nodeId].aabb.b.x) {
-			for (float y = nodes[nodeId].aabb.a.y;; y = nodes[nodeId].aabb.b.y) {
-				for (float z = nodes[nodeId].aabb.a.z;; z = nodes[nodeId].aabb.b.z) {
-					nodes.emplace_back(AABB{midPoint, {x, y, z}});
-					i++;
-
-					if (i % 2) // 1, 3, 5, 7
-						break;
-				}
-				if (i % 4 == 3) // 3, 7
-					break;
-			}
-			if (i >= 7) // 7
-				break;
-		}*/
 	}
 
 	void Octree::moveElementsToChildren(size_t nodeId) {

@@ -6,7 +6,6 @@ namespace amaz::eng {
 
 	DescriptorBuilder& DescriptorBuilder::add_buffer(uint32_t binding, uint32_t count, BindingType type, ShaderStages stage, std::optional<VkDescriptorBufferInfo> buffer_info) {
 
-		//std::cout << std::format("BINDING TYPE: {}\n", (int)type);
 		BindingInfo bindInfo {
 			.binding = binding,
 			.count = count,
@@ -24,7 +23,6 @@ namespace amaz::eng {
 
 	DescriptorBuilder& DescriptorBuilder::add_buffer(uint32_t binding, uint32_t count, BindingType type, ShaderStages stage, VkDescriptorBufferInfo* buffer_info) {
 
-		//std::cout << std::format("BINDING TYPE: {}\n", (int)type);
 		BindingInfo bindInfo {
 			.binding = binding,
 			.count = count,
@@ -75,7 +73,6 @@ namespace amaz::eng {
 	VkDescriptorSetLayout DescriptorBuilder::build_layout(VkDevice device) {
 		std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
 		for (auto& bind : bindings) {
-			//std::cout << std::format("Binding: {}\n", bind.binding);
 			VkDescriptorSetLayoutBinding newBind = {
 				.binding = bind.binding,
 				.descriptorType = (VkDescriptorType)bind.type,

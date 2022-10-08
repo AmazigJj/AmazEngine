@@ -4,18 +4,6 @@
 
 namespace amaz {
 
-	// void func(amaz::util::range_view<int> range) {
-	// 	range.for_each([](int i){
-	// 		std::cout << i << "\n";
-	// 	});
-	// }
-
-	// void func2() {
-	// 	const std::vector v{1, 2, 3, 4, 5, 6};
-	// 	auto range = v | std::views::reverse;
-	// 	func(v);
-	// }
-
 	glm::mat4 calcTransformMatrix(glm::vec3 position, float scale, glm::vec3 rotation) {
 		auto translation = glm::translate(position);
 
@@ -126,9 +114,6 @@ namespace amaz {
 		octree = amaz::Octree::create({ { -65536.f, -65536.f, -65536.f }, { 65536.f, 65536.f, 65536.f } });
 		initCollision();
 
-		std::cout << "\n\n\n\n";	
-		//func2();
-		std::cout << "\n\n\n\n";
 	}
 
 	void Physics::initCollision() {
@@ -160,12 +145,6 @@ namespace amaz {
 		for (auto tri : mesh.tris) {
 			octree->addElement(amaz::registerTri(tri));
 		}
-
-		/*auto timeStart = std::chrono::high_resolution_clock::now();
-		octree->genAll();
-		auto timeEnd = std::chrono::high_resolution_clock::now();
-
-		std::cout << "generating whole mesh took: " << std::chrono::duration<double, std::milli>(timeEnd - timeStart) << "\n";*/
 
 		_meshIDs[name] = _meshes.size();
 		_meshes.push_back(mesh);
@@ -210,27 +189,6 @@ namespace amaz {
 
 		auto firstCollideTime = std::chrono::high_resolution_clock::now();
 
-		/*std::vector<SphereCollisionResults> collisions;
-
-		collisions.resize(mesh.tris.size());
-
-		auto view = mesh.tris
-			| std::views::transform([this, tempPlayer](Triangle tri) { return CapsuleVsTriangle(tempPlayer, tri); })
-			| std::views::filter([this](SphereCollisionResults results) { return results.collided; });
-
-		std::ranges::partial_sort_copy(view, collisions, [](const auto& a, const auto& b) {
-			return a.penetration_depth > b.penetration_depth;
-			});*/
-
-
-			/*for (auto mesh : _meshes) {
-				for (Triangle tri : mesh.tris) {
-					if ((result = CapsuleVsTriangle(tempPlayer, tri)).collided) {
-						collisions.push_back({ result.penetration_depth, tri });
-					}
-				}
-			}*/
-
 		std::sort(collisions.begin(), collisions.end(), [](const auto& a, const auto& b) {
 			return a.first > b.first;
 			});
@@ -254,14 +212,6 @@ namespace amaz {
 		}
 
 		auto collidedTrisTime = std::chrono::high_resolution_clock::now();
-
-		/*std::cout << "tris size: " << tris.size() << "\n";
-		std::cout << "tris in scene: " << amaz::trisCount() << "\n";
-		std::cout << "Octree nodes explored: " << count << "\n";
-
-		std::cout
-			<< "Octree time: " << std::chrono::duration<double, std::milli>(gotTrisTime - startTime) << "\n"
-			<< "Total time: " << std::chrono::duration<double, std::milli>(collidedTrisTime - startTime) << "\n";*/
 
 		return true;
 
@@ -288,9 +238,7 @@ namespace amaz {
 
 			if (glm::length(movementVector) > 0.f) {
 				movementVector = glm::normalize(movementVector) * (24 * seconds);
-
-				//resolveCollision(input.camPos, movementVector, 0.2f);
-				//newResolveCollisions(input.camPos, movementVector);
+				
 				input.camPos += movementVector;
 			}
 		}
@@ -345,28 +293,8 @@ namespace amaz {
 
 	}
 
-	void Physics::detectCollision(glm::vec3 pos, glm::vec3 movementVec) {
-		glm::vec3 newPos = pos + movementVec;
-
-		Capsule tempPlayer = {
-			player.tip + newPos,
-			player.base + newPos,
-			player.radius
-		};
-
-		for (auto& mesh : _meshes) {
-			for (Triangle tri : mesh.tris) {
-				if (CapsuleVsTriangle(tempPlayer, tri).collided) {
-					static int collisionCount;
-					std::cout << "Colliding: " << collisionCount++ << "\n";
-				}
-			}
-		}
-	}
-
 	float Physics::distBetweenPoints(glm::vec3 a, glm::vec3 b) {
-		glm::vec3 c = glm::abs(b - a);
-		return glm::sqrt(std::pow(c.x, 2) + std::pow(c.y, 2) + std::pow(c.z, 2));
+		return glm::sqrt(squaredDistBetweenPoints(a, b));
 	}
 
 	float Physics::squaredDistBetweenPoints(glm::vec3 a, glm::vec3 b) {
@@ -375,7 +303,7 @@ namespace amaz {
 	}
 
 	bool Physics::SphereVsSphere(Sphere a, Sphere b) {
-		if (squaredDistBetweenPoints(a.pos, b.pos) < std::pow((a.radius + b.radius), 2))
+		if (squaredDistBetweenPoints(a.pos, b.pos) < (a.radius + b.radius) * (a.radius + b.radius))
 			return true;
 		else
 			return false;

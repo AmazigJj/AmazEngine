@@ -21,7 +21,6 @@ template<>
 struct std::hash<Vertex> {
 	size_t operator()(Vertex const& vertex) const {
 
-		//return std::hash<glm::vec3>()(vertex.position);
 		size_t result = 0;
 		hash_combine<glm::vec3>(result, vertex.position);
 		hash_combine<glm::vec3>(result, vertex.normal);
@@ -30,16 +29,6 @@ struct std::hash<Vertex> {
 		return result;
 	}
 };
-
-// namespace std {
-//     template<> struct hash<Vertex> {
-//         size_t operator()(Vertex const& vertex) const {
-//             return ((hash<glm::vec3>()(vertex.position) ^
-//                    (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
-//                    (hash<glm::vec2>()(vertex.uv) << 1);
-//         }
-//     };
-// }
 
 bool Mesh::load_from_obj(std::string filename)
 {
@@ -163,13 +152,6 @@ bool Mesh::load_from_gltf(std::string filename) {
 
 	return true;
 }
-
-
-
-// glm::vec3 position;
-//     glm::vec3 normal;
-//     glm::vec3 color;
-//     glm::vec2 uv;
 
 bool Vertex::operator==(const Vertex& other) const {
     return position == other.position && normal == other.normal && color == other.color && uv == other.uv;

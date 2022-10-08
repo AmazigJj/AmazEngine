@@ -195,8 +195,6 @@ void Renderer::cleanupFrameBuffers() {
 	for (int i = 0; i < _swapchainImageViews.size(); i++)
 		vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
 	vkDestroySwapchainKHR(_device, _swapchain, nullptr);
-	// vkDestroyImageView(_device, _depthImageView, nullptr);
-	// vmaDestroyImage(_allocator, _depthImage._image, _depthImage._allocation);
 }
 
 void Renderer::recreateFrameBuffers(uint32_t width, uint32_t height) {
@@ -285,15 +283,6 @@ void Renderer::initPrePassRenderpass() {
 
 	auto subpass = vkinit::subpassDescription(VK_PIPELINE_BIND_POINT_GRAPHICS, colourAttachments, depthAttachmentRef);
 
-	// auto dependency = vkinit::subpassDependency(VK_SUBPASS_EXTERNAL, 0,
-	// 	VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-	// 	0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-	
-	// auto depthDependency = vkinit::subpassDependency(VK_SUBPASS_EXTERNAL, 0,
-	// 	VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-	// 	VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-	// 	0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
-
 	std::vector<VkAttachmentDescription> attachments = { depthAttachment };
 	std::vector<VkSubpassDescription> subpasses = { subpass };
 	std::vector<VkSubpassDependency> dependencies = { };
@@ -345,10 +334,6 @@ void Renderer::initTonemapRenderPass() {
 		.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 	};
 
-	// auto depthAttachment = vkinit::attachmentDescription(_depthFormat, VK_SAMPLE_COUNT_1_BIT,
-	// 	VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-	// 	VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
 	VkAttachmentReference depthAttachmentRef = {
 		.attachment = VK_ATTACHMENT_UNUSED,
 		.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
@@ -361,11 +346,6 @@ void Renderer::initTonemapRenderPass() {
 	auto dependency = vkinit::subpassDependency(VK_SUBPASS_EXTERNAL, 0,
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 		0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-	
-	// auto depthDependency = vkinit::subpassDependency(VK_SUBPASS_EXTERNAL, 0,
-	// 	VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-	// 	VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-	// 	0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
 
 	std::vector<VkAttachmentDescription> attachments = { colorAttachment };
 	std::vector<VkSubpassDescription> subpasses = { subpass };
@@ -480,26 +460,10 @@ void Renderer::initFrameBuffers() {
 			std::array<VkImageView, 1> attachments = {_swapchainImageViews[i]};
 			_tonemapFramebuffers[i] = createFrameBuffer(_winSize.width, _winSize.height, attachments, _tonemapRenderPass, false);
 		}
-
-		// std::array<VkImageView, 2> attachments{
-		// 	_swapchainImageViews[i],
-		// 	_depthImageView
-		// };
-
-		// fb_info.pAttachments = attachments.data();
-		// fb_info.attachmentCount = attachments.size();
-
-		// vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]);
-
-		// _mainDeletionQueue.push_function([=]() {
-		// 	vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
-		// 	vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
-		// 	});
 	}
 
 	_shadowAtlasFrameBuffer = createShadowFrameBuffer(8192, 8192,
 		_shadowAtlasImage,_shadowAtlasImageView, false);
-	// _pointLightFrameBuffer = createShadowFrameBuffer(1024, 1024, _pointLightShadowImage, _pointLightShadowImageView, true);
 }
 
 void Renderer::cleanupRenderBuffers() {
@@ -514,16 +478,8 @@ void Renderer::cleanupRenderBuffers() {
 		vmaDestroyImage(_allocator, _mainFrameDepthImages[i]._image, _mainFrameDepthImages[i]._allocation);
 
 	}
-
-
-	for (int i = 0; i < _depthPyramidSets.size(); i++) {
-		
-	}
+	
 	_depthPyramidSets.clear();
-	//for (int i = 0; i < _swapchainImageViews.size(); i++)
-	//vkDestroySwapchainKHR(_device, _swapchain, nullptr);
-	// vkDestroyImageView(_device, _depthImageView, nullptr);
-	// vmaDestroyImage(_allocator, _depthImage._image, _depthImage._allocation);
 }
 
 void Renderer::recreateRenderBuffers() {
@@ -671,27 +627,6 @@ VkFramebuffer Renderer::createShadowFrameBuffer(uint32_t width, uint32_t height,
 		vmaDestroyImage(_allocator, shadowDepthImage._image, shadowDepthImage._allocation);
 	});
 
-	// auto imageInfo = vkinit::image_create_info(VK_FORMAT_R32_SFLOAT,
-	// 	VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, depthImageExtent,
-	// 	cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0, cubemap ? 6 : 1);
-
-	// VmaAllocationCreateInfo imageAllocInfo{
-	// 	.usage = VMA_MEMORY_USAGE_GPU_ONLY,
-	// 	.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-	// };
-
-	// vmaCreateImage(_allocator, &imageInfo, &imageAllocInfo, &shadowImage._image, &shadowImage._allocation, nullptr);
-
-	// auto viewInfo = vkinit::imageview_create_info(VK_FORMAT_R32_SFLOAT, shadowImage._image, 
-	// 	VK_IMAGE_ASPECT_COLOR_BIT, cubemap ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D);
-
-	// vkCreateImageView(_device, &viewInfo, nullptr, &shadowImageView);
-
-	// _mainDeletionQueue.push_function([=]() {
-	// 	vkDestroyImageView(_device, shadowImageView, nullptr);
-	// 	vmaDestroyImage(_allocator, shadowImage._image, shadowImage._allocation);
-	// });
-	
 	std::array<VkImageView, 1> attachments = {shadowDepthImageView};
 	
 	VkFramebufferCreateInfo fbInfo = vkinit::frameBufferCreateInfo(_shadowRenderPass, width, height);
@@ -1355,8 +1290,6 @@ void Renderer::createDepthPyramidImage() {
 	uint32_t depthPyramidMipLevels = getImageMipLevels(depthPyramidWidth, depthPyramidHeight);
 	std::cout << depthPyramidMipLevels << "\n";
 
-	//uint32_t depthPyramidMipLevels = 8;
-
 	VkExtent3D extent{
 		.width = depthPyramidWidth,
 		.height = depthPyramidHeight,
@@ -1595,49 +1528,6 @@ void Renderer::registerMaterial(std::string matTemplate, std::string name, std::
 	_materials[name] = mat;
 	//return _materials[name];
 }
-
-// Commented out unused function, not sure what to do with this
-// std::tuple< VkPipeline, VkPipelineLayout> Renderer::createPipeline(std::span<VkDescriptorSetLayout> setLayouts, std::span<VkPushConstantRange> pushConstants,
-// 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages, VertexInputDescription vertexDescription) {
-
-
-// 	VkPipelineLayoutCreateInfo pipeline_layout_info =
-// 		vkinit::pipeline_layout_create_info(setLayouts, pushConstants);
-
-// 	VkPipelineLayout pipeLayout;
-// 	vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &pipeLayout);
-
-// 	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
-	
-// 	PipelineBuilder pipelineBuilder{
-// 		._shaderStages = shaderStages,
-// 		._vertexInputInfo = vkinit::vertex_input_state_create_info(vertexDescription),
-
-// 		//input assembly is the configuration for drawing triangle lists, strips, or individual points.
-// 		//we are just going to draw triangle list
-// 		._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
-
-// 		//build viewport and scissor from the swapchain extents
-// 		._viewport = {0.0f, 0.0f, (float)_winSize.width, (float)_winSize.height, 0.0f, 1.0f},
-// 		._scissor = {{ 0, 0 },  (uint32_t)_winSize.width, (uint32_t)_winSize.height},
-
-// 		//configure the rasterizer to draw filled triangles
-// 		._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL),
-// 		//a single blend attachment with no blending and writing to RGBA
-// 		._colorBlendAttachment = vkinit::color_blend_attachment_state(),
-// 		//we don't use multisampling, so just run the default one
-// 		._multisampling = vkinit::multisampling_state_create_info(),
-
-// 		._pipelineLayout = pipeLayout,
-// 		//default depthtesting
-// 		._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL)
-// 	};
-
-// 	VkPipeline pipeline = pipelineBuilder.build_pipeline(_device, _mainRenderPass);
-
-// 	return { pipeline, pipeLayout };
-
-// }
 
 void Renderer::initImgui() {
 
@@ -1935,8 +1825,6 @@ template <typename T>
 void Renderer::createStageAndCopyBuffer(std::span<T> data, AllocatedBuffer& bufferLocation, VkBufferUsageFlags usageFlags) {
 	const size_t bufferSize = data.size() * sizeof(T);
 
-	//std::cout << std::format("Creating buffer of size: {}", bufferSize);
-
 	//allocate staging buffer
 	VkBufferCreateInfo stagingBufferInfo = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -2113,25 +2001,20 @@ void Renderer::allocateTexture(VkImageView imageView, VkDescriptorPool descPool,
 
 }
 
+// searches for the material, and return nullptr if not found
 Material* Renderer::getMaterial(const std::string& name) {
-	//search for the object, and return nullptr if not found
-	auto it = _materials.find(name);
-	if (it == _materials.end()) {
+	if (auto it = _materials.find(name); it != _materials.end())
+		return &(it->second);
+	else
 		return nullptr;
-	}
-	else {
-		return &(*it).second;
-	}
 }
 
+// searches for the mesh, and return nullptr if not found
 Mesh* Renderer::getMesh(const std::string& name) {
-	auto it = _meshes.find(name);
-	if (it == _meshes.end()) {
+	if (auto it = _meshes.find(name); it != _meshes.end())
+		return &(it->second);
+	else
 		return nullptr;
-	}
-	else {
-		return &(*it).second;
-	}
 }
 
 void Renderer::setPlayerPos(glm::vec3 pos) {
@@ -2232,32 +2115,17 @@ void Renderer::drawImguiWindow(Input* input) {
 	if (timeTillUpdateFps <= 0.f && frameTimes.size() > 20) {
 		float totalFrameTime = 0.f;
 		int j = 0;
-
-		//std::cout << "STARTING FPS UPDATE";
-		//std::cout << std::format("STARTING FPS UPDATE\n, frameTimes.size = {}\n", frameTimes.size());
 		for (size_t i = frameTimes.size() - 1; i >= 0 && i >= frameTimes.size()-10; i--) {
 			totalFrameTime+=frameTimes[i];
 			j++;
-
-			// std::cout << std::format(
-			// 	"Counting frame {}\nFrametime is: {}\nTotal Frametime is: {}\n", j, frameTimes[i], totalFrameTime);
-			// std::cout << "Counting frame " << j << "\n"
-			// 	<< "Frametime is: " << frameTimes[i] << "\n"
-			// 	<< "Total Frametime is: " << totalFrameTime << "\n";
 			
 		}
 
 		totalFrameTime/=10.f;
 		fps = 1000/totalFrameTime;
-
-		// std::cout << "Frametimes counted: " << j << "\n"
-		// 	<< "Total Frametime is: " << totalFrameTime << "\n"
-		// 	<< "FPS is: " << fps << "\n";
 		
 		timeTillUpdateFps = 100;
 	}
-
-	//fps = 1000/frametime;
 
 	std::ostringstream fpsText;
 
@@ -2269,9 +2137,6 @@ void Renderer::drawImguiWindow(Input* input) {
 	frameTimeText.precision(2);
 	frameTimeText << "Frametime: " << std::fixed << frametime << "ms";
 
-	//std::string fpsText = out.str();
-	//std::string frameTimeText = "Frametime: " + std::to_string(frametime) +"ms";
-
 	ImGui::TextUnformatted(fpsText.str().c_str());
 	ImGui::TextUnformatted(frameTimeText.str().c_str());
 	ImGui::PlotLines("Frametimes", frameTimes.data(), frameTimes.size(), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(300, 100));
@@ -2279,8 +2144,6 @@ void Renderer::drawImguiWindow(Input* input) {
 	ImGui::Checkbox("generate depth pyramid", &depthPyramid);
 
 	ImGui::End();
-
-	//ImGui::ShowDemoWindow();
 
 	ImGui::Render();
 }
@@ -2316,8 +2179,6 @@ glm::mat4 perspectiveProjectionMatrix(float fovY, float aspect, float zNear, flo
 }
 
 void Renderer::draw(glm::vec3 camDir, Input* input) {
-
-	
 
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplSDL2_NewFrame(_window.get());
@@ -2389,8 +2250,6 @@ void Renderer::draw(glm::vec3 camDir, Input* input) {
 		.pClearValues = &clearValues[0]
 	};
 
-	
-
 	//sortObjects(_renderables);
 
 	glm::vec3 camPos;
@@ -2399,10 +2258,6 @@ void Renderer::draw(glm::vec3 camDir, Input* input) {
 		camPos = renderPos - (camDir * glm::vec3{ 3 }) + glm::vec3{ 0, 1, 0 };
 	else
 		camPos = renderPos + glm::vec3{ 0, 0.6f, 0 };
-
-	//glm::vec3 sunlightDir = { -2.0f, 4.0f, -1.0f };
-
-
 
 	glm::vec3 sunlightDir = { -1.f, 2.f, -1.f };
 	float near_plane = 1.0f, far_plane = 150.f;
@@ -2424,7 +2279,6 @@ void Renderer::draw(glm::vec3 camDir, Input* input) {
 	
 
 	GPUSceneData sceneParameters = {
-		//.ambientColor = { sin(framed),0,cos(framed) },
 		.ambientColor = { 0.1f, 0.1f, 0.1f },
 		.sunlightDirection = sunlightDir,
 		.sunlightColor = { 0.8f, 0.8f, 0.8f},
@@ -2450,34 +2304,6 @@ void Renderer::draw(glm::vec3 camDir, Input* input) {
 	glm::mat4 camProj;
 	glm::mat4 inverseCamProj;
 	camProj = perspectiveProjectionMatrix(glm::radians(fov), 1600.f / 900.f, zNear, zFar, &inverseCamProj);
-
-
-	// glm::vec4 test1{1, 124.f / 255.f, 0.5f, 1.0};
-	// auto test = inverseCamProj * test1;
-
-	// auto test2 = camProj * test1;
-
-	// std::stringstream ss;
-
-	// ss << "projection of " << test1.x << ", " << test1.y << ", " << test1.z << ", " << test1.w << ": "
-	// 	<< test2.x << ", " << test2.y << ", " << test2.z << ", " << test2.w << "\n";
-
-	// auto test3 = inverseCamProj * test2;
-
-	// ss << "inverse of " << test2.x << ", " << test2.y << ", " << test2.z << ", " << test2.w << ": "
-	// 	<< test3.x << ", " << test3.y << ", " << test3.z << ", " << test3.w << "\n";
-
-	// ss << "inverse of " << test1.x << ", " << test1.y << ", " << test1.z << ", " << test1.w << ": "
-	// 	<< test.x << ", " << test.y << ", " << test.z << ", " << test.w << "\n";
-
-	// ss << *(int*)&test.x << "\n";
-
-	// std::cout << ss.str();
-
-	
-
-	//camProj = glm::perspective(glm::radians(fov), 1600.f / 900.f, zNear, zFar);
-	//camProj[1][1] *= -1;
 
 	mapData(_renderables, camView, camProj, sceneParameters, _pointLights);
 
@@ -2681,10 +2507,6 @@ GPUPointLight Renderer::generatePointLight(PointLightObject light, uint32_t tile
 
 		
 		sMP[i] = {(float)tileX/2.f, (float)tileY/2.f, 0.5f};
-
-		
-
-		//sMP[i] = {i + 1.f, 0.f, 1.f};
 	}
 
 	float near = 1.0f;
@@ -2759,7 +2581,6 @@ glm::vec4 normalizePlane(glm::vec4 p) {
 	return p / glm::length(glm::vec3(p));
 }
 
-
 inline uint32_t getGroupCount(uint32_t threadCount, uint32_t localSize) {
 	return (threadCount + localSize - 1) / localSize;
 }
@@ -2773,9 +2594,6 @@ void Renderer::genDepthPyramid(VkCommandBuffer cmd, uint32_t frameNumber) {
 		VK_IMAGE_ASPECT_DEPTH_BIT);
 
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toShaderRead);
-
-	// std::cout << "GENERATING DEPTH PYRAMID\n";
-	// std::cout << _depthPyramidViews.size() << " mipmaps to generate\n";
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _depthPyramidPipeline);
 
@@ -2793,7 +2611,6 @@ void Renderer::genDepthPyramid(VkCommandBuffer cmd, uint32_t frameNumber) {
 
 	// TODO: look into computing multiple depths through one dispatch (for example, 64x64 area -> 1x1)
 	for (uint32_t i = 0; i < depthPyramidLevels; i++) {
-		// std::cout << "generating mipmap: " << i << "\n";
 
 		uint32_t levelWidth = depthPyramidWidth >> i;
 		uint32_t levelHeight = depthPyramidHeight >> i;
@@ -2822,8 +2639,6 @@ void Renderer::genDepthPyramid(VkCommandBuffer cmd, uint32_t frameNumber) {
 		VK_IMAGE_ASPECT_DEPTH_BIT);
 
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toDepthAttachment);
-
-	//std::cout << "FINISHED DEPTH PYRAMID\n";	
 		
 }
 
@@ -2875,9 +2690,6 @@ void Renderer::cullLightsPass(VkCommandBuffer cmd, std::span<PointLightObject> l
 	
 	glm::vec4 frustumX = normalizePlane(projectionT[3] + projectionT[0]); // x + w < 0
 	glm::vec4 frustumY = normalizePlane(projectionT[3] + projectionT[1]); // y + w < 0
-
-	// std::cout << "PROJECTION MATRIX: \n";
-	// mat4Print(projection);
 
 	GPULightCullPushConstants pushConstant{
 		.viewMatrix = viewMatrix,
@@ -2946,17 +2758,12 @@ void Renderer::clusterLightsPass(VkCommandBuffer cmd, bool findClusters, glm::ma
 	auto barrier = vkinit::bufferBarrier(getCurrentFrame().lightIndicesBuffer._buffer, _graphicsQueueFamily, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 
-
-	//vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _lightCullPipeline);
-
-
 }
 
 void Renderer::drawPrePass(VkCommandBuffer cmd, std::span<RenderObject> renderObjects, GPUSceneData sceneParameters, uint32_t frameIndex) {
 	VkClearValue depthClear = {
 		.depthStencil = {
 			.depth = 0.f,
-			//.stencil = 0
 		}
 	};
 
@@ -3006,18 +2813,14 @@ void Renderer::drawPrePass(VkCommandBuffer cmd, std::span<RenderObject> renderOb
 
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _prePassPipelineLayout, 0, 1, &getCurrentFrame().globalDescriptor, offsets.size(), offsets.data());
 
-	// vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout, 1, 1, &getCurrentFrame().objectDescriptor, 0, nullptr);
-
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _prePassPipelineLayout, 1, 1, &getCurrentFrame().objectDescriptor, 0, nullptr);
-
 
 	auto draws = compactDraws(renderObjects);
 
+	// TODO: generate drawCommands on the GPU
 	{
 		VkDrawIndexedIndirectCommand* drawCommands;
 		vmaMapMemory(_allocator, getCurrentFrame().indirectBuffer._allocation, (void**)&drawCommands);
-
-		//int j = 0;
 
 		for (uint32_t i = 0; i < draws.size(); i++) {
 			auto& draw = draws[i];
@@ -3044,9 +2847,7 @@ void Renderer::drawPrePass(VkCommandBuffer cmd, std::span<RenderObject> renderOb
 
 		uint32_t draw_stride = sizeof(VkDrawIndexedIndirectCommand);
 
-
-		//vkCmdDrawIndirectCount(cmd, getCurrentFrame().indirectBuffer._buffer, indirect_offset, getCurrentFrame().indirectCount._buffer, countOffset, 50, draw_stride);
-
+		// TODO: move to using vkCmdDrawIndexedIndirectCount
 		vkCmdDrawIndexedIndirect(cmd, getCurrentFrame().indirectBuffer._buffer, indirect_offset, 1, draw_stride);
 		//vkCmdDrawIndexedIndirectCount(cmd, getCurrentFrame().indirectBuffer._buffer, indirect_offset, getCurrentFrame().indirectCount._buffer, countOffset, 1000000, draw_stride);
 	}
@@ -3059,7 +2860,6 @@ void Renderer::drawShadowPass(VkCommandBuffer cmd, std::span<RenderObject> rende
 	VkClearValue depthClear = {
 		.depthStencil = {
 			.depth = 1.f,
-			//.stencil = 0
 		}
 	};
 
@@ -3105,11 +2905,10 @@ void Renderer::drawShadowPass(VkCommandBuffer cmd, std::span<RenderObject> rende
 
 	auto draws = compactDraws(renderObjects);
 
+	// TODO: generate drawCommands on the GPU
 	{
 		VkDrawIndexedIndirectCommand* drawCommands;
 		vmaMapMemory(_allocator, getCurrentFrame().indirectBuffer._allocation, (void**)&drawCommands);
-
-		//int j = 0;
 
 		for (uint32_t i = 0; i < draws.size(); i++) {
 			auto& draw = draws[i];
@@ -3198,11 +2997,8 @@ void Renderer::drawShadow(VkCommandBuffer cmd, std::span<IndirectBatch> draws, i
 
 		uint32_t draw_stride = sizeof(VkDrawIndexedIndirectCommand);
 
-
-		//vkCmdDrawIndirectCount(cmd, getCurrentFrame().indirectBuffer._buffer, indirect_offset, getCurrentFrame().indirectCount._buffer, countOffset, 50, draw_stride);
-
+		// TODO: move to vkCmdDrawIndexedIndirectCount
 		vkCmdDrawIndexedIndirect(cmd, getCurrentFrame().indirectBuffer._buffer, indirect_offset, 1, draw_stride);
-
 	}
 }
 
@@ -3213,13 +3009,10 @@ void Renderer::drawObjects(VkCommandBuffer cmd, std::span<RenderObject> renderOb
 
 	auto draws = compactDraws(renderObjects);
 
+	// TODO: generate drawCommands on the GPU
 	{
 		VkDrawIndexedIndirectCommand* drawCommands;
 		vmaMapMemory(_allocator, getCurrentFrame().indirectBuffer._allocation, (void**)&drawCommands);
-
-		//int j = 0;
-
-		//std::cout << "draws.size() = " << draws.size() << "\n";
 
 		for (uint32_t i = 0; i < draws.size(); i++) {
 			auto& draw = draws[i];
@@ -3231,8 +3024,6 @@ void Renderer::drawObjects(VkCommandBuffer cmd, std::span<RenderObject> renderOb
 				.vertexOffset = 0,
 				.firstInstance = i
 			};
-
-			//j += draw.count;
 
 		}
 
@@ -3264,8 +3055,7 @@ void Renderer::drawObjects(VkCommandBuffer cmd, std::span<RenderObject> renderOb
 		uint32_t draw_stride = sizeof(VkDrawIndexedIndirectCommand);
 
 
-		//vkCmdDrawIndirectCount(cmd, getCurrentFrame().indirectBuffer._buffer, indirect_offset, getCurrentFrame().indirectCount._buffer, countOffset, 50, draw_stride);
-
+		// TODO: move to vkCmdDrawIndexedIndirectCount
 		vkCmdDrawIndexedIndirect(cmd, getCurrentFrame().indirectBuffer._buffer, indirect_offset, 1, draw_stride);
 
 	}
