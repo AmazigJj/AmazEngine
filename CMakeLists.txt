@@ -2,6 +2,7 @@
 # and include sub-projects here.
 #
 cmake_minimum_required (VERSION 3.20)
+project ("AmazEngine")
 
 include(cmake/CPM.cmake)
 
@@ -31,6 +32,17 @@ function(add_shaders target_name)
         )
 endfunction(add_shaders target_name)
 
+if (${CMAKE_SYSTEM_NAME} MATCHES Windows)
+message(STATUS "Building AmazEngine for Windows")
+set(COPY_COMMAND copy)
+elseif(${CMAKE_SYSTEM_NAME} MATCHES Linux)
+message(STATUS "Building AmazEngine for Linux")
+set(COPY_COMMAND cp)
+else()
+message(STATUS "Not a target OS")
+endif()
+
+
 function(add_assets target_name)
     foreach(FILE ${ARGN})
 
@@ -44,7 +56,7 @@ function(add_assets target_name)
    
         add_custom_command(
         OUTPUT ${OUT}
-        COMMAND copy \"${IN}\" \"${OUT}\"
+        COMMAND ${COPY_COMMAND} \"${IN}\" \"${OUT}\"
         DEPENDS ${IN})
         list(APPEND ASSET_FILES ${OUT})
     endforeach(FILE)
@@ -55,7 +67,7 @@ function(add_assets target_name)
         )
 endfunction(add_assets target_name)
 
-project ("AmazEngine")
+
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
