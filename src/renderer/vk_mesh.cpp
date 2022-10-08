@@ -157,8 +157,7 @@ bool Vertex::operator==(const Vertex& other) const {
     return position == other.position && normal == other.normal && color == other.color && uv == other.uv;
 }
 
-VertexInputDescription Vertex::get_vertex_description()
-{
+VertexInputDescription Vertex::get_vertex_description() {
 	VertexInputDescription description;
 
 	//we will have just 1 vertex buffer binding, with a per-vertex rate

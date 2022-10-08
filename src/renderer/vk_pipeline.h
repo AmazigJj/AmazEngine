@@ -1,3 +1,4 @@
+#pragma once
 #include <vulkan/vulkan.h>
 #include <vector>
 #include "util/ShaderStages.h"
@@ -66,7 +67,6 @@ public:
 	VkViewport _viewport;
 	VkRect2D _scissor;
 
-	//VkPipelineRasterizationStateCreateInfo _rasterizer;
 	CullingMode _cullMode = CullingMode::NONE;
 	PrimitiveFacing _facing = PrimitiveFacing::COUNTER_CLOCKWISE;
 	
@@ -91,8 +91,6 @@ public:
 	VkPipelineLayout _pipelineLayout;
 
 	VkPipelineDepthStencilStateCreateInfo _depthStencil;
-
-	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
 
 	PipelineBuilder& addShader(ShaderStageInfo shader);
 	PipelineBuilder& clearShaders();

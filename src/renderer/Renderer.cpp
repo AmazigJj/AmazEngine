@@ -163,6 +163,10 @@ void Renderer::initVulkan(int verMajor, int verMinor, std::string appName) {
 
 	std::cout << "Vulkan version is: " << apiVersion << "\n";
 
+	
+
+	backendRenderer = std::make_shared<amaz::eng::VkBackendRenderer>(_device);
+
 }
 
 void Renderer::initSwapchain(bool vsync) {
@@ -979,7 +983,9 @@ void Renderer::initPipelines() {
 		.setLayout(meshPipelineLayout)
 		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, false, VK_COMPARE_OP_GREATER_OR_EQUAL));
 
-	VkPipeline meshPipeline = meshPipelineBuilder.build_pipeline(_device, _mainRenderPass);
+	VkPipeline meshPipeline = backendRenderer->buildPipeline(meshPipelineBuilder, _mainRenderPass);
+
+
 	createMaterial(meshPipeline, meshPipelineLayout, "defaultmesh");
 
 	_prePassPipelineLayout = meshPipelineLayout;
@@ -991,7 +997,7 @@ void Renderer::initPipelines() {
 		.setLayout(_prePassPipelineLayout)
 		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
 
-	_prePassPipeline = prePassPipelineBuilder.build_pipeline(_device, _prePassRenderPass);
+	_prePassPipeline = backendRenderer->buildPipeline(prePassPipelineBuilder, _prePassRenderPass);
 
 	setLayouts = { _globalSetLayout, _objectSetLayout, _singleTextureSetLayout };
 
@@ -1007,8 +1013,10 @@ void Renderer::initPipelines() {
 		.addShader({amaz::eng::ShaderStages::FRAGMENT, texturedMeshShader})
 		.setLayout(texturedPipeLayout)
 		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
-	
-	VkPipeline texPipeline = texturedPipelineBuilder.build_pipeline(_device, _mainRenderPass);
+
+	VkPipeline texPipeline = backendRenderer->buildPipeline(texturedPipelineBuilder, _mainRenderPass);
+
+
 	createMaterial(texPipeline, texturedPipeLayout, "texturedmesh");
 
 	setLayouts = { _globalSetLayout, _objectSetLayout, _singleTextureSetLayout, _singleTextureSetLayout };
@@ -1025,8 +1033,8 @@ void Renderer::initPipelines() {
 		.addShader({amaz::eng::ShaderStages::FRAGMENT, specularMapShader})
 		.setLayout(specPipeLayout)
 		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
-
-	VkPipeline specPipeline = specPipelineBuilder.build_pipeline(_device, _mainRenderPass);
+	
+	VkPipeline specPipeline = backendRenderer->buildPipeline(specPipelineBuilder, _mainRenderPass);
 
 	createMaterial(specPipeline, specPipeLayout, "specularmap");
 
@@ -1068,8 +1076,8 @@ void Renderer::initPipelines() {
 		.setCullmode(amaz::eng::CullingMode::FRONT)
 		.setLayout(_shadowPipelineLayout)
 		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL));
-
-	_shadowPipeline = shadowPipelineBuilder.build_pipeline(_device, _shadowRenderPass);
+	
+	_shadowPipeline = backendRenderer->buildPipeline(shadowPipelineBuilder, _shadowRenderPass);
 
 	VkShaderModule fullscreenVertShader;
 	if (!loadShaderModule("../shaders/fullscreen.vert.spv", fullscreenVertShader)) {
@@ -1123,7 +1131,8 @@ void Renderer::initPipelines() {
 		.setLayout(_tonemapPipelineLayout)
 		.setDepthStencilInfo(vkinit::depth_stencil_create_info(false, false, VK_COMPARE_OP_GREATER_OR_EQUAL));
 
-	_tonemapPipeline = tonemapPipelineBuilder.build_pipeline(_device, _tonemapRenderPass);
+	
+	_tonemapPipeline = backendRenderer->buildPipeline(tonemapPipelineBuilder, _tonemapRenderPass);
 
 	_mainFrameImagesSets = std::vector<VkDescriptorSet>(_swapchainImages.size());
 
@@ -3106,8 +3115,6 @@ void Renderer::drawTonemapping(VkCommandBuffer cmd, uint32_t imageIndex) {
 
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _tonemapPipelineLayout,
 		0, 1, &_mainFrameImagesSets[imageIndex], 0, nullptr);
-
-	//float exposure = 1.f;
 	
 	vkCmdPushConstants(cmd, _tonemapPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float), &exposure);
 	

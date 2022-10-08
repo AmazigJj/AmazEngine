@@ -29,6 +29,7 @@
 #include "gpu_structs.h"
 #include "../input/Input.h"
 #include "util/ShaderStages.h"
+#include "backend/VkBackendRenderer.h"
 
 
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -284,6 +285,8 @@ private:
 	} _actualWinSize;
 
 	std::unique_ptr<SDL_Window, decltype(&SDL_DestroyWindow)> _window;
+	std::shared_ptr<amaz::eng::VkBackendRenderer> backendRenderer;
+	
 
 	VkInstance _instance;
 	VkDebugUtilsMessengerEXT _debugMessenger;
