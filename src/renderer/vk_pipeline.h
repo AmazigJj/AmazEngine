@@ -2,6 +2,8 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include "util/ShaderStages.h"
+#include "util/VertexInputDescription.h"
+
 namespace amaz::eng {
 struct ShaderStageInfo {
 	amaz::eng::ShaderStages stage;
@@ -58,14 +60,49 @@ enum class MSAASamples {
     SIXTY_FOUR = 64
 };
 
+struct Viewport {
+	float    x;
+    float    y;
+    float    width;
+    float    height;
+    float    minDepth;
+    float    maxDepth;
+};
+
+struct XY {
+	uint32_t x, y;
+};
+
+struct Rect2D {
+	XY offset, extent;
+};
+
+enum CompareOp {
+	NEVER = 0,
+	LESS = 1,
+	EQUAL = 2,
+	LESS_OR_EQUAL = 3,
+	GREATER = 4,
+	NOT_EQUAL = 5,
+	GREATER_OR_EQUAL = 6,
+	ALWAYS = 7
+};
+
+enum class Topology {
+	TRIANGLE_LIST = 3
+};
+
 class PipelineBuilder {
 public:
 
 	std::vector<ShaderStageInfo> _shaderStages;
-	VkPipelineVertexInputStateCreateInfo _vertexInputInfo; // TODO: replace with our own struct
-	VkPrimitiveTopology _topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // TODO: replace with our own topology enum
-	VkViewport _viewport;
-	VkRect2D _scissor;
+	//VkPipelineVertexInputStateCreateInfo _vertexInputInfo; // TODO: replace with our own struct
+	std::vector<VertexInputBinding> _inputBindings;
+
+	Topology _topology = Topology::TRIANGLE_LIST; // TODO: replace with our own topology enum
+	Viewport _viewport;
+	Rect2D _scissor;
+	
 
 	CullingMode _cullMode = CullingMode::NONE;
 	PrimitiveFacing _facing = PrimitiveFacing::COUNTER_CLOCKWISE;
@@ -88,16 +125,17 @@ public:
 	bool _sampleShading = false;
 	float _minSampleShading = 0;
 
-	VkPipelineLayout _pipelineLayout;
-
-	VkPipelineDepthStencilStateCreateInfo _depthStencil;
+	bool _depthTest;
+	bool _depthWrite;
+	CompareOp _compareOp;
 
 	PipelineBuilder& addShader(ShaderStageInfo shader);
 	PipelineBuilder& clearShaders();
-	PipelineBuilder& setVertexInput(VkPipelineVertexInputStateCreateInfo info);
-	PipelineBuilder& setTopology(VkPrimitiveTopology topology);
-	PipelineBuilder& setViewport(VkViewport viewport);
-	PipelineBuilder& setScissor(VkRect2D scissor);
+	PipelineBuilder& addVertexBinding(VertexInputBinding binding);
+	PipelineBuilder& clearVertexBindings();
+	PipelineBuilder& setTopology(Topology topology);
+	PipelineBuilder& setViewport(Viewport viewport);
+	PipelineBuilder& setScissor(Rect2D scissor);
 	PipelineBuilder& setCullmode(CullingMode mode);
 	PipelineBuilder& setFacing(PrimitiveFacing facing);
 	PipelineBuilder& enableRasterizerDiscard();
@@ -116,8 +154,7 @@ public:
 	PipelineBuilder& setMSAASamples(MSAASamples samples);
 	PipelineBuilder& enableSampleShading(float minSampleShading);
 	PipelineBuilder& disableSampleShading();
-	PipelineBuilder& setLayout(VkPipelineLayout layout);
-	PipelineBuilder& setDepthStencilInfo(VkPipelineDepthStencilStateCreateInfo depthStencil);
+	PipelineBuilder& setDepthInfo(bool depthTest, bool depthWrite, CompareOp compareOp);
 
 };
 

@@ -16,7 +16,6 @@ namespace vkinit {
 	VkCommandBufferAllocateInfo command_buffer_allocate_info(VkCommandPool pool, uint32_t count = 1, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 	VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule shaderModule);
 	VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info();
-	VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info(VertexInputDescription& vertexInput);
 	VkPipelineInputAssemblyStateCreateInfo input_assembly_create_info(VkPrimitiveTopology topology);
 	VkPipelineRasterizationStateCreateInfo rasterization_state_create_info(VkPolygonMode polygonMode, VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT);
 	VkPipelineMultisampleStateCreateInfo multisampling_state_create_info();

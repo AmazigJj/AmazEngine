@@ -13,22 +13,27 @@ namespace amaz::eng {
 		return *this;
 	}
 
-	PipelineBuilder& PipelineBuilder::setVertexInput(VkPipelineVertexInputStateCreateInfo info) {
-		_vertexInputInfo = info;
+	PipelineBuilder& PipelineBuilder::addVertexBinding(VertexInputBinding binding) {
+		_inputBindings.push_back(binding);
 		return *this;
 	}
 
-	PipelineBuilder& PipelineBuilder::setTopology(VkPrimitiveTopology topology) {
+	PipelineBuilder& PipelineBuilder::clearVertexBindings() {
+		_inputBindings.clear();
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::setTopology(Topology topology) {
 		_topology = topology;
 		return *this;
 	}
 
-	PipelineBuilder& PipelineBuilder::setViewport(VkViewport viewport) {
+	PipelineBuilder& PipelineBuilder::setViewport(Viewport viewport) {
 		_viewport = viewport;
 		return *this;
 	}
 
-	PipelineBuilder& PipelineBuilder::setScissor(VkRect2D scissor) {
+	PipelineBuilder& PipelineBuilder::setScissor(Rect2D scissor) {
 		_scissor = scissor;
 		return *this;
 	}
@@ -133,13 +138,10 @@ namespace amaz::eng {
 		return *this;
 	}
 
-	PipelineBuilder& PipelineBuilder::setLayout(VkPipelineLayout layout) {
-		_pipelineLayout = layout;
-		return *this;
-	}
-
-	PipelineBuilder& PipelineBuilder::setDepthStencilInfo(VkPipelineDepthStencilStateCreateInfo depthStencil) {
-		_depthStencil = depthStencil;
+	PipelineBuilder& PipelineBuilder::setDepthInfo(bool depthTest, bool depthWrite, CompareOp compareOp) {
+		_depthTest = depthTest;
+		_depthWrite = depthWrite;
+		_compareOp = compareOp;
 		return *this;
 	}
 

@@ -1,9 +1,10 @@
 #include "VkBackendRenderer.h"
 
 #include <iostream>
+#include <vulkan/vulkan_core.h>
 
 namespace amaz::eng {
-	VkPipeline VkBackendRenderer::buildPipeline(PipelineBuilder& builder, VkRenderPass pass) {
+	VkPipeline VkBackendRenderer::buildPipeline(PipelineBuilder& builder, VkRenderPass pass, VkPipelineLayout layout) {
 		//make viewport state from our stored viewport and scissor.
 		//at the moment we won't support multiple viewports or scissors
 		VkPipelineViewportStateCreateInfo viewportState = {
@@ -11,9 +12,9 @@ namespace amaz::eng {
 			.pNext = nullptr,
 
 			.viewportCount = 1,
-			.pViewports = &builder._viewport,
+			.pViewports = (VkViewport*)&builder._viewport,
 			.scissorCount = 1,
-			.pScissors = &builder._scissor
+			.pScissors = (VkRect2D*)&builder._scissor
 		};
 
 		// TODO: add blending support
@@ -71,7 +72,7 @@ namespace amaz::eng {
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 			.pNext = nullptr,
-			.topology = builder._topology,
+			.topology = (VkPrimitiveTopology)builder._topology,
 			// unnecessary, only using tris
 			.primitiveRestartEnable = false
 		};
@@ -101,6 +102,51 @@ namespace amaz::eng {
 			.minSampleShading = builder._minSampleShading
 		};
 
+		std::vector<VkVertexInputBindingDescription> bindings;
+    	std::vector<VkVertexInputAttributeDescription> attributes;
+
+		for (uint32_t i = 0; i < builder._inputBindings.size(); i++) {
+			auto inputBinding =  builder._inputBindings[i];
+			bindings.push_back({
+				.binding = i,
+				.stride = inputBinding.stride,
+				.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+			});
+			for (uint32_t j = 0; j < inputBinding.attributes.size(); j++) {
+				auto inputAttribute = inputBinding.attributes[j];
+
+				attributes.push_back({
+					.location = j,
+					.binding = i,
+					.format = (VkFormat)inputAttribute.format,
+					.offset = inputAttribute.offset
+				});
+
+			}
+		}
+
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo {
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+			.pNext = nullptr,
+			.vertexBindingDescriptionCount = (uint32_t)bindings.size(),
+			.pVertexBindingDescriptions = bindings.data(),
+			.vertexAttributeDescriptionCount = (uint32_t)attributes.size(),
+			.pVertexAttributeDescriptions = attributes.data()
+		};
+
+		VkPipelineDepthStencilStateCreateInfo depthStencilInfo {
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+			.pNext = nullptr,
+
+			.depthTestEnable = builder._depthTest,
+			.depthWriteEnable = builder._depthWrite,
+			.depthCompareOp = (VkCompareOp)builder._compareOp,
+			.depthBoundsTestEnable = VK_FALSE,
+			.stencilTestEnable = VK_FALSE,
+			.minDepthBounds = 0.0f, // Optional
+			.maxDepthBounds = 1.0f, // Optional
+		};
+
 		//build the actual pipeline
 		//we now use all of the info structs we have been writing into this one to create the pipeline
 		VkGraphicsPipelineCreateInfo pipelineInfo = {
@@ -109,15 +155,15 @@ namespace amaz::eng {
 
 			.stageCount = (uint32_t)shaderStageInfos.size(),
 			.pStages = shaderStageInfos.data(),
-			.pVertexInputState = &builder._vertexInputInfo,
+			.pVertexInputState = &vertexInputInfo,
 			.pInputAssemblyState = &inputAssemblyInfo,
 			.pViewportState = &viewportState,
 			.pRasterizationState = &rasterizer,
 			.pMultisampleState = &multisamplingInfo,
-			.pDepthStencilState = &builder._depthStencil,
+			.pDepthStencilState = &depthStencilInfo,
 			.pColorBlendState = &colorBlending,
 			.pDynamicState = &dynamicState,
-			.layout = builder._pipelineLayout,
+			.layout = layout,
 			.renderPass = pass,
 			.subpass = 0,
 			.basePipelineHandle = VK_NULL_HANDLE

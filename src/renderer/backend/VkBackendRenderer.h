@@ -8,7 +8,7 @@ namespace amaz::eng {
 class VkBackendRenderer {
 public:
 	VkBackendRenderer(VkDevice device) : _device(device) {}
-	VkPipeline buildPipeline(PipelineBuilder& builder, VkRenderPass pass);
+	VkPipeline buildPipeline(PipelineBuilder& builder, VkRenderPass pass, VkPipelineLayout layout);
 
 private:
 	VkDevice _device;

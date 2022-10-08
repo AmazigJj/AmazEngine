@@ -961,13 +961,13 @@ void Renderer::initPipelines() {
 
 	vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &meshPipelineLayout);
 
-	VertexInputDescription vertexDescription = Vertex::get_vertex_description();
+	auto vertexDescription = Vertex::getVertexBinding();
 
 	amaz::eng::PipelineBuilder meshPipelineBuilder;
 	meshPipelineBuilder.addShader({amaz::eng::ShaderStages::VERTEX, meshVertShader})
 		.addShader({amaz::eng::ShaderStages::FRAGMENT, triangleFragShader})
-		.setVertexInput(vkinit::vertex_input_state_create_info(vertexDescription))
-		.setTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+		.addVertexBinding(vertexDescription)
+		.setTopology(amaz::eng::Topology::TRIANGLE_LIST)
 		.setViewport({0.0f, 0.0f, (float)_winSize.width, (float)_winSize.height, 0.0f, 1.0f})
 		.setScissor({{ 0, 0 },  {(uint32_t)_winSize.width, (uint32_t)_winSize.height}})
 		.setCullmode(amaz::eng::CullingMode::BACK)
@@ -980,10 +980,9 @@ void Renderer::initPipelines() {
 		.disableColorBlending() // doesn't do anything currently
 		.setMSAASamples(amaz::eng::MSAASamples::ONE)
 		.disableSampleShading()
-		.setLayout(meshPipelineLayout)
-		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, false, VK_COMPARE_OP_GREATER_OR_EQUAL));
+		.setDepthInfo(true, false, amaz::eng::CompareOp::GREATER_OR_EQUAL);
 
-	VkPipeline meshPipeline = backendRenderer->buildPipeline(meshPipelineBuilder, _mainRenderPass);
+	VkPipeline meshPipeline = backendRenderer->buildPipeline(meshPipelineBuilder, _mainRenderPass, meshPipelineLayout);
 
 
 	createMaterial(meshPipeline, meshPipelineLayout, "defaultmesh");
@@ -994,10 +993,9 @@ void Renderer::initPipelines() {
 	auto prePassPipelineBuilder = meshPipelineBuilder;
 	prePassPipelineBuilder.clearShaders()
 		.addShader({amaz::eng::ShaderStages::VERTEX, meshVertShader})
-		.setLayout(_prePassPipelineLayout)
-		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
+		.setDepthInfo(true, true, amaz::eng::CompareOp::GREATER_OR_EQUAL);
 
-	_prePassPipeline = backendRenderer->buildPipeline(prePassPipelineBuilder, _prePassRenderPass);
+	_prePassPipeline = backendRenderer->buildPipeline(prePassPipelineBuilder, _prePassRenderPass, _prePassPipelineLayout);
 
 	setLayouts = { _globalSetLayout, _objectSetLayout, _singleTextureSetLayout };
 
@@ -1011,10 +1009,9 @@ void Renderer::initPipelines() {
 	texturedPipelineBuilder.clearShaders()
 		.addShader({amaz::eng::ShaderStages::VERTEX, meshVertShader})
 		.addShader({amaz::eng::ShaderStages::FRAGMENT, texturedMeshShader})
-		.setLayout(texturedPipeLayout)
-		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
+		.setDepthInfo(true, false, amaz::eng::CompareOp::GREATER_OR_EQUAL);
 
-	VkPipeline texPipeline = backendRenderer->buildPipeline(texturedPipelineBuilder, _mainRenderPass);
+	VkPipeline texPipeline = backendRenderer->buildPipeline(texturedPipelineBuilder, _mainRenderPass, texturedPipeLayout);
 
 
 	createMaterial(texPipeline, texturedPipeLayout, "texturedmesh");
@@ -1031,10 +1028,9 @@ void Renderer::initPipelines() {
 	specPipelineBuilder.clearShaders()
 		.addShader({amaz::eng::ShaderStages::VERTEX, meshVertShader})
 		.addShader({amaz::eng::ShaderStages::FRAGMENT, specularMapShader})
-		.setLayout(specPipeLayout)
-		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
+		.setDepthInfo(true, false, amaz::eng::CompareOp::GREATER_OR_EQUAL);
 	
-	VkPipeline specPipeline = backendRenderer->buildPipeline(specPipelineBuilder, _mainRenderPass);
+	VkPipeline specPipeline = backendRenderer->buildPipeline(specPipelineBuilder, _mainRenderPass, specPipeLayout);
 
 	createMaterial(specPipeline, specPipeLayout, "specularmap");
 
@@ -1074,10 +1070,9 @@ void Renderer::initPipelines() {
 		.setViewport({0.0f, 0.0f, (float)8192, (float)8192, 0.0f, 1.0f})
 		.setScissor({{ 0, 0 },  {(uint32_t)8192, (uint32_t)8192}})
 		.setCullmode(amaz::eng::CullingMode::FRONT)
-		.setLayout(_shadowPipelineLayout)
-		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL));
+		.setDepthInfo(true, true, amaz::eng::CompareOp::LESS_OR_EQUAL);
 	
-	_shadowPipeline = backendRenderer->buildPipeline(shadowPipelineBuilder, _shadowRenderPass);
+	_shadowPipeline = backendRenderer->buildPipeline(shadowPipelineBuilder, _shadowRenderPass, _shadowPipelineLayout);
 
 	VkShaderModule fullscreenVertShader;
 	if (!loadShaderModule("../shaders/fullscreen.vert.spv", fullscreenVertShader)) {
@@ -1112,12 +1107,7 @@ void Renderer::initPipelines() {
 
 	tonemapPipelineBuilder.addShader({amaz::eng::ShaderStages::VERTEX, fullscreenVertShader})
 		.addShader({amaz::eng::ShaderStages::FRAGMENT, tonemapFragShader})
-		.setVertexInput({
-	 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-	 		.vertexBindingDescriptionCount = 0,
-	 		.vertexAttributeDescriptionCount = 0,
-	 	})
-		.setTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+		.setTopology(amaz::eng::Topology::TRIANGLE_LIST)
 		.setViewport({0.0f, 0.0f, (float)_winSize.width, (float)_winSize.height, 0.0f, 1.0f})
 		.setScissor({{ 0, 0 },  {(uint32_t)_winSize.width, (uint32_t)_winSize.height}})
 		.setCullmode(amaz::eng::CullingMode::NONE)
@@ -1128,11 +1118,10 @@ void Renderer::initPipelines() {
 		.disableColorBlending()
 		.setMSAASamples(amaz::eng::MSAASamples::ONE)
 		.disableSampleShading()
-		.setLayout(_tonemapPipelineLayout)
-		.setDepthStencilInfo(vkinit::depth_stencil_create_info(false, false, VK_COMPARE_OP_GREATER_OR_EQUAL));
+		.setDepthInfo(false, false, amaz::eng::CompareOp::GREATER_OR_EQUAL);
 
 	
-	_tonemapPipeline = backendRenderer->buildPipeline(tonemapPipelineBuilder, _tonemapRenderPass);
+	_tonemapPipeline = backendRenderer->buildPipeline(tonemapPipelineBuilder, _tonemapRenderPass, _tonemapPipelineLayout);
 
 	_mainFrameImagesSets = std::vector<VkDescriptorSet>(_swapchainImages.size());
 

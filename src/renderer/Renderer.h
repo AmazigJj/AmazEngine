@@ -227,8 +227,6 @@ public:
 	bool loadShaderModule(std::string filePath, VkShaderModule& outShaderModule);
 	Material& createMaterial(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name);
 	void registerMaterial(std::string matTemplate, std::string name, std::optional<std::string> diffuseMap = std::nullopt, std::optional<std::string> specularMap = std::nullopt);
-	std::tuple< VkPipeline, VkPipelineLayout> createPipeline(std::span<VkDescriptorSetLayout> setLayouts, std::span<VkPushConstantRange> pushConstants,
-		std::vector<VkPipelineShaderStageCreateInfo> shaderStages, VertexInputDescription vertexDescription);
 	void loadImage(std::string filename, std::string textureName);
 	bool loadImageFromFile(std::string file, AllocatedImage& outImage);
 	void loadMesh(std::string name, std::string filename);

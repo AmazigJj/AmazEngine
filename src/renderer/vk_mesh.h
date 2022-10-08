@@ -6,20 +6,14 @@
 #include <glm/vec2.hpp>
 #include "vk_types.h"
 
-struct VertexInputDescription {
-
-    std::vector<VkVertexInputBindingDescription> bindings;
-    std::vector<VkVertexInputAttributeDescription> attributes;
-
-    VkPipelineVertexInputStateCreateFlags flags = 0;
-};
+#include "util/VertexInputDescription.h"
 
 struct Vertex {
     alignas(16) glm::vec3 position;
     alignas(16) glm::vec3 normal;
     alignas(16) glm::vec3 color;
     alignas(8) glm::vec2 uv;
-    static VertexInputDescription get_vertex_description();
+	static amaz::eng::VertexInputBinding getVertexBinding();
 	bool operator==(const Vertex& other) const;
 };
 

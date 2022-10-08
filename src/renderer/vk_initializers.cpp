@@ -47,18 +47,6 @@ VkPipelineVertexInputStateCreateInfo vkinit::vertex_input_state_create_info() {
 	};
 }
 
-VkPipelineVertexInputStateCreateInfo vkinit::vertex_input_state_create_info(VertexInputDescription& vertexInput) {
-
-	return {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		.pNext = nullptr,
-		.vertexBindingDescriptionCount = (uint32_t)vertexInput.bindings.size(),
-		.pVertexBindingDescriptions = vertexInput.bindings.data(),
-		.vertexAttributeDescriptionCount = (uint32_t)vertexInput.attributes.size(),
-		.pVertexAttributeDescriptions = vertexInput.attributes.data()
-	};
-}
-
 VkPipelineInputAssemblyStateCreateInfo vkinit::input_assembly_create_info(VkPrimitiveTopology topology) {
 	return {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
