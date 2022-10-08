@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required (VERSION 3.20)
 
-add_executable (AmazEngine "AmazEngine.cpp" "renderer/vk_initializers.cpp" "renderer/vk_mesh.cpp" "physics/Collision.cpp" "physics/Octree.cpp" "renderer/Renderer.cpp" "input/Input.cpp" "physics/Physics.cpp" "scene/scene.cpp" "renderer/vk_descriptor.cpp" "renderer/vk_pipeline.cpp")
+add_executable (AmazEngine "AmazEngine.cpp" "renderer/vk_initializers.cpp" "renderer/vk_mesh.cpp" "physics/Collision.cpp" "physics/Octree.cpp" "renderer/Renderer.cpp" "input/Input.cpp" "physics/Physics.cpp" "scene/scene.cpp" "renderer/vk_descriptor.cpp" "renderer/vk_pipeline.cpp" "renderer/backend/VkBackendRenderer.cpp")
 
 set_target_properties(AmazEngine PROPERTIES CXX_STANDARD 20)
 
