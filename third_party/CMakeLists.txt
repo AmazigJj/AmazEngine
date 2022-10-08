@@ -6,12 +6,13 @@ message("Vulkan found? " ${VULKAN_FOUND})
 message("Alright, where is it? " ${Vulkan_LIBRARY})
 message("And I can include it? " ${Vulkan_INCLUDE_DIR})
 
-CPMAddPackage("gh:charles-lunarg/vk-bootstrap@0.5")
+CPMAddPackage("gh:charles-lunarg/vk-bootstrap@0.6")
 
 CPMAddPackage("gh:g-truc/glm#0.9.9.8")
 
 set(SDL_VIDEO ON)
 set(SDL_VULKAN ON)
+# Unable to update because ninja complains "ninja: error: build.ninja:4288: multiple rules generate lib/SDL2.lib" (tried moving to 2.24.1 and 2.24.0)
 CPMAddPackage("gh:libsdl-org/SDL#release-2.0.22")
 
 CPMAddPackage("gh:tinyobjloader/tinyobjloader@2.0.0rc9")
@@ -21,7 +22,7 @@ CPMAddPackage("gh:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator@3.0.1")
 
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 set(JSON_Install OFF CACHE INTERNAL "")
-CPMAddPackage("gh:nlohmann/json@3.11.0")
+CPMAddPackage("gh:nlohmann/json@3.11.2")
 
 CPMAddPackage("gh:ocornut/imgui@1.88")
 if(imgui_ADDED)
