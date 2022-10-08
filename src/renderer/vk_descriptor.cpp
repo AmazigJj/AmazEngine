@@ -1,7 +1,6 @@
 #include "vk_descriptor.h"
 #include <vulkan/vulkan_core.h>
 #include <iostream>
-#include <format>
 
 namespace amaz::eng {
 

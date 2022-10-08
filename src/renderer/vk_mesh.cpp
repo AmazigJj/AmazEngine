@@ -8,7 +8,6 @@
 #include <unordered_map>
 #include "vk_types.h"
 #include "tiny_gltf.h"
-#include <format>
 
 // https://stackoverflow.com/questions/19195183/how-to-properly-hash-the-custom-struct
 template <class T>
