@@ -34,10 +34,10 @@ endfunction(add_shaders target_name)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES Windows)
 message(STATUS "Building AmazEngine for Windows")
-set(COPY_COMMAND copy)
+# Windows-only stuff
 elseif(${CMAKE_SYSTEM_NAME} MATCHES Linux)
 message(STATUS "Building AmazEngine for Linux")
-set(COPY_COMMAND cp)
+# Linux-only stuff
 else()
 message(STATUS "Not a target OS")
 endif()
@@ -56,7 +56,7 @@ function(add_assets target_name)
    
         add_custom_command(
         OUTPUT ${OUT}
-        COMMAND ${COPY_COMMAND} \"${IN}\" \"${OUT}\"
+        COMMAND ${CMAKE_COMMAND} -E copy \"${IN}\" \"${OUT}\"
         DEPENDS ${IN})
         list(APPEND ASSET_FILES ${OUT})
     endforeach(FILE)
