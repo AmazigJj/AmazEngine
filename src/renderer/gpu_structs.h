@@ -12,6 +12,7 @@ struct GPUCameraData {
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 proj;
 	alignas(16) glm::mat4 viewproj;
+	alignas(16) glm::mat4 inverseProj;
 };
 
 struct GPUSceneData {
@@ -108,6 +109,6 @@ struct GPUClusterPushConstant {
 	alignas(4)	bool findClusters;
 	alignas(4)	float zNear;
 	alignas(4)	float zFar;
-	alignas(64) glm::mat4 viewMatrix;
-	alignas(64)	glm::mat4 inverseMatrix; // Needed if findClusters == true
+	// alignas(64) glm::mat4 viewMatrix;
+	// alignas(64)	glm::mat4 inverseMatrix; // Needed if findClusters == true
 };

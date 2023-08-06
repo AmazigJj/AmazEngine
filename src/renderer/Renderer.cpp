@@ -1,15 +1,17 @@
+#include "Renderer.h"
+
 #include "SDL_video.h"
 #include "glm/exponential.hpp"
 #include "imgui.h"
-#include "vk_mem_alloc.h"
 #include <vulkan/vulkan_core.h>
-#define STB_IMAGE_IMPLEMENTATION
 #define VMA_IMPLEMENTATION
-#include "Renderer.h"
+#include "vk_mem_alloc.h"
+#define STB_IMAGE_IMPLEMENTATION
 #include <exception>
 #include "vk_descriptor.h"
 #include <sstream>
 #include "vk_pipeline.h"
+#include <format>
 
 bool vsync = false;
 
@@ -26,13 +28,21 @@ Renderer::Renderer(int width, int height) : _window(nullptr, SDL_DestroyWindow) 
 	createWindow(width, height, false, false);
 	initVulkan(1, 2, "TestApp");
 	initSwapchain(false);
+	std::cout << "SWAPCHAIN INITIALIZED\n";
 	initRenderPasseses();
+	std::cout << "RENDER PASSES INITIALIZED\n";
 	initCommands();
+	std::cout << "COMMANDS INITIALIZED\n";
 	initSyncStructures();
+	std::cout << "SYNC STRUCTURES INITIALIZED\n";
 	initFrameBuffers();
+	std::cout << "FRAME BUFFERS INITIALIZED\n";
 	initDescriptors();
+	std::cout << "DESCRIPTORS INITIALIZED\n";
 	initPipelines();
+	std::cout << "PIPELINES INITIALIZED\n";
 	initImgui();
+	std::cout << "IMGUI INITIALIZED\n";
 
 }
 
@@ -85,21 +95,38 @@ void Renderer::createWindow(int width, int height, bool fullscreen, bool borderl
 
 void Renderer::initVulkan(int verMajor, int verMinor, std::string appName) {
 
+	
+
+	std::cout << "a\n";
+	volkInitialize();
+	std::cout << "a\n";
 	vkb::InstanceBuilder builder;
+
+	VkValidationFeatureEnableEXT enabled[] = { VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT };
+	
 
 	//make the Vulkan instance, with basic debug features
 	auto vkb_inst = builder.set_app_name(appName.c_str())
 		.set_engine_name("AmazEngine")
 		.request_validation_layers(true)
+		// .add_validation_feature_disable(VK_VALIDATION_FEATURE_DISABLE_ALL_EXT)
+		.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
+		// .add_validation_disable(VkValidationCheckEXT check)
+		// .set_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 		.require_api_version(verMajor, verMinor, 0)
 		.use_default_debug_messenger()
 		.build()
 		.value();
+	
+	std::cout << "a\n";
 
 
 	_instance = vkb_inst.instance;
 	_debugMessenger = vkb_inst.debug_messenger;
 
+	volkLoadInstance(_instance);
+
+	std::cout << "a\n";
 
 	// get the surface of the window we opened with SDL
 	if (SDL_Vulkan_CreateSurface(_window.get(), vkb_inst.instance, &_surface) != SDL_TRUE) {
@@ -108,11 +135,15 @@ void Renderer::initVulkan(int verMajor, int verMinor, std::string appName) {
 		std::cout << e << std::endl;
 	}
 
+	std::cout << "a\n";
+
 	VkPhysicalDeviceVulkan12Features features{
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
 		.pNext = nullptr,
-		.drawIndirectCount = VK_TRUE
+		.drawIndirectCount = VK_TRUE,
+		.samplerFilterMinmax = VK_TRUE
 	};
+
 
 	//use vkbootstrap to select a GPU.
 	//We want a GPU that can write to the SDL surface and supports Vulkan Version Specific
@@ -121,9 +152,11 @@ void Renderer::initVulkan(int verMajor, int verMinor, std::string appName) {
 		.set_minimum_version(verMajor, verMinor)
 		.set_surface(_surface)
 		.set_required_features_12(features)
+		.add_desired_extension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME)
 		.select()
 		.value();
 
+	std::cout << "a\n";
 
 	//create the final Vulkan device
 	vkb::DeviceBuilder deviceBuilder{ physicalDevice };
@@ -140,12 +173,41 @@ void Renderer::initVulkan(int verMajor, int verMinor, std::string appName) {
 	_graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
+	volkLoadDevice(_device);
+
+	std::cout << "a\n";
+
+	VmaVulkanFunctions VmaVulkanFunctions = {
+		.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties,
+		.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties,
+		.vkAllocateMemory = vkAllocateMemory,
+		.vkFreeMemory = vkFreeMemory,
+		.vkMapMemory = vkMapMemory,
+		.vkUnmapMemory = vkUnmapMemory,
+		.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges,
+		.vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges,
+		.vkBindBufferMemory = vkBindBufferMemory,
+		.vkBindImageMemory = vkBindImageMemory,
+		.vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements,
+		.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements,
+		.vkCreateBuffer = vkCreateBuffer,
+		.vkDestroyBuffer = vkDestroyBuffer,
+		.vkCreateImage = vkCreateImage,
+		.vkDestroyImage = vkDestroyImage,
+		.vkCmdCopyBuffer = vkCmdCopyBuffer,
+
+
+	};
+
 	VmaAllocatorCreateInfo allocatorInfo = {
 		.physicalDevice = vkbDevice.physical_device,
 		.device = vkbDevice.device,
+		.pVulkanFunctions = &VmaVulkanFunctions,
 		.instance = vkb_inst.instance
 	};
 	vmaCreateAllocator(&allocatorInfo, &_allocator);
+
+	std::cout << "a\n";
 
 	vkGetPhysicalDeviceProperties(vkbDevice.physical_device, &_gpuProperties);
 
@@ -166,17 +228,52 @@ void Renderer::initVulkan(int verMajor, int verMinor, std::string appName) {
 }
 
 void Renderer::initSwapchain(bool vsync) {
+
+	VkSurfaceCapabilitiesKHR surfaceCapabilities;
+
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, _surface, &surfaceCapabilities);
+
+	uint32_t presentModeCount = 10;
+	std::array<VkPresentModeKHR, 10> presentModes;
+
+	VkPresentModeKHR presentMode;
+
+	if (vsync) {
+		presentMode = VK_PRESENT_MODE_FIFO_KHR;
+	} else {
+		presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+	}
+
+	if (vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, _surface,
+		&presentModeCount, presentModes.data()) == VK_SUCCESS) {
+		for (int i = 0; i < presentModeCount; i++) {
+			std::cout << "Supported Present Mode: " << (int)presentModes[i] << "\n";
+			if (vsync) {
+				if (presentModes[i] == VK_PRESENT_MODE_FIFO_RELAXED_KHR) {
+					presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+				}
+			} else {
+				if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+					presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+				}
+			}
+		}
+	}
+
 	vkb::SwapchainBuilder swapchainBuilder{ _physicalDevice,_device,_surface };
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
 		.use_default_format_selection()
-		.set_desired_present_mode(vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR)
+		.set_desired_present_mode(presentMode)
 		.set_desired_extent(_actualWinSize.width, _actualWinSize.height)
 		.build()
 		.value();
 
+
+	
 	//store swapchain and its related images
 	_swapchain = vkbSwapchain.swapchain;
+	// std::cout << std::format("Swapchain Present Mode: {}\n", (int)vkbSwapchain.present_mode);
 	_swapchainImages = vkbSwapchain.get_images().value();
 	_swapchainImageViews = vkbSwapchain.get_image_views().value();
 
@@ -715,7 +812,7 @@ void Renderer::initDescriptors() {
 	const size_t sceneParamBufferSize = (padUniformBufferSize(sizeof(GPUCameraData)) + padUniformBufferSize(sizeof(GPUSceneData))) * FRAME_OVERLAP;
 
 	_sceneParameterBuffer = createBuffer(sceneParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-
+	
 	//create a descriptor pool that will hold 10 uniform buffers and 10 dynamic uniform buffers
 	std::vector<VkDescriptorPoolSize> sizes =
 	{
@@ -787,7 +884,7 @@ void Renderer::initDescriptors() {
 		constexpr int MAX_LIGHT_INDICES = 1000;
 		_frames[i].lightIndicesBuffer = createBuffer(sizeof(uint32_t) + (sizeof(uint32_t) * MAX_LIGHT_INDICES), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
-		const int MAX_DRAWS = 1000;
+		const int MAX_DRAWS = 10000;
 		_frames[i].indirectBuffer = createBuffer(MAX_DRAWS * sizeof(VkDrawIndexedIndirectCommand), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 		_frames[i].indirectCount = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
@@ -979,9 +1076,11 @@ void Renderer::initPipelines() {
 		.setLayout(meshPipelineLayout)
 		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, false, VK_COMPARE_OP_GREATER_OR_EQUAL));
 
+	std::cout << "Creating meshPipeline!\n";
 	VkPipeline meshPipeline = meshPipelineBuilder.build_pipeline(_device, _mainRenderPass);
+	std::cout << "Created meshPipeline!\n";
 	createMaterial(meshPipeline, meshPipelineLayout, "defaultmesh");
-
+	
 	_prePassPipelineLayout = meshPipelineLayout;
 
 
@@ -992,6 +1091,7 @@ void Renderer::initPipelines() {
 		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
 
 	_prePassPipeline = prePassPipelineBuilder.build_pipeline(_device, _prePassRenderPass);
+	std::cout << "Created prePassPipeline!\n";
 
 	setLayouts = { _globalSetLayout, _objectSetLayout, _singleTextureSetLayout };
 
@@ -1009,6 +1109,7 @@ void Renderer::initPipelines() {
 		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
 	
 	VkPipeline texPipeline = texturedPipelineBuilder.build_pipeline(_device, _mainRenderPass);
+	std::cout << "Created texturedPipelineBuilder!\n";
 	createMaterial(texPipeline, texturedPipeLayout, "texturedmesh");
 
 	setLayouts = { _globalSetLayout, _objectSetLayout, _singleTextureSetLayout, _singleTextureSetLayout };
@@ -1026,9 +1127,10 @@ void Renderer::initPipelines() {
 		.setLayout(specPipeLayout)
 		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
 
-	VkPipeline specPipeline = specPipelineBuilder.build_pipeline(_device, _mainRenderPass);
+	// VkPipeline specPipeline = specPipelineBuilder.build_pipeline(_device, _mainRenderPass);
+	// std::cout << "Created specPipelineBuilder!\n";
 
-	createMaterial(specPipeline, specPipeLayout, "specularmap");
+	// createMaterial(specPipeline, specPipeLayout, "specularmap");
 
 	VkShaderModule shadowVertShader;
 	if (!loadShaderModule("../shaders/shadow.vert.spv", shadowVertShader)) {
@@ -1070,6 +1172,7 @@ void Renderer::initPipelines() {
 		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL));
 
 	_shadowPipeline = shadowPipelineBuilder.build_pipeline(_device, _shadowRenderPass);
+	std::cout << "Created shadowPipeline!\n";
 
 	VkShaderModule fullscreenVertShader;
 	if (!loadShaderModule("../shaders/fullscreen.vert.spv", fullscreenVertShader)) {
@@ -1124,6 +1227,7 @@ void Renderer::initPipelines() {
 		.setDepthStencilInfo(vkinit::depth_stencil_create_info(false, false, VK_COMPARE_OP_GREATER_OR_EQUAL));
 
 	_tonemapPipeline = tonemapPipelineBuilder.build_pipeline(_device, _tonemapRenderPass);
+	std::cout << "Created tonemapPipeline!\n";
 
 	_mainFrameImagesSets = std::vector<VkDescriptorSet>(_swapchainImages.size());
 
@@ -1158,7 +1262,7 @@ void Renderer::initPipelines() {
 	_mainDeletionQueue.push_function([=]() {
 		vkDestroyPipeline(_device, meshPipeline, nullptr);
 		vkDestroyPipeline(_device, texPipeline, nullptr);
-		vkDestroyPipeline(_device, specPipeline, nullptr);
+		// vkDestroyPipeline(_device, specPipeline, nullptr);
 		vkDestroyPipeline(_device, _shadowPipeline, nullptr);
 		vkDestroyPipeline(_device, _tonemapPipeline, nullptr);
 
@@ -1192,6 +1296,7 @@ VkPipeline Renderer::initComputePipeline(std::string filePath, VkPipelineLayout 
 
 	VkPipeline pipeline;
 	vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &pipeline);
+	std::cout << "Compute shader pipeline successfully loaded\n";
 
 	//deleting the compute shader
 	vkDestroyShaderModule(_device, shaderModule, nullptr);
@@ -1445,6 +1550,7 @@ bool Renderer::loadShaderModule(std::string filePath, VkShaderModule& outShaderM
 	std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
 	if (!file.is_open()) {
+		// std::cout << std::format("COULDN'T FIND FILE: {}", filePath);
 		return false;
 	}
 
@@ -1531,6 +1637,14 @@ void Renderer::registerMaterial(std::string matTemplate, std::string name, std::
 
 void Renderer::initImgui() {
 
+	
+	// ImGui_ImplVulkan_LoadFunctions([](const char *function_name, void *vulkan_instance) {
+    // 	return vkGetInstanceProcAddr(*(reinterpret_cast<VkInstance *>(vulkan_instance)), function_name);
+  	// }, &_instance);
+
+	// std::cout << "IMGUI LOADED FUNCTIONS\n";
+
+
 	// create descriptor pool for IMGUI
 	// TODO: maybe make this smaller lol
 	std::array<VkDescriptorPoolSize, 11> pool_sizes{
@@ -1561,9 +1675,12 @@ void Renderer::initImgui() {
 	vkCreateDescriptorPool(_device, &poolInfo, nullptr, &imguiPool);
 
 	// initialize imgui library
+	std::cout << "CREATING IMGUI CONTEXT\n";
 	ImGui::CreateContext();
+	std::cout << "CREATED IMGUI CONTEXT\n";
 
 	ImGui_ImplSDL2_InitForVulkan(_window.get());
+	std::cout << "IMGUI SDL2 INITIALIZED FOR VULKAN\n";
 
 	ImGui_ImplVulkan_InitInfo initInfo{
 		.Instance = _instance,
@@ -1577,6 +1694,7 @@ void Renderer::initImgui() {
 	};
 
 	ImGui_ImplVulkan_Init(&initInfo, _tonemapRenderPass);
+	std::cout << "IMGUI INITIALIZED FOR VULKAN\n";
 
 
 	immediateSubmit([&](VkCommandBuffer cmd) {
@@ -1584,6 +1702,7 @@ void Renderer::initImgui() {
 		});
 
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
+	std::cout << "IMGUI CREATED FONTS\n";
 
 	_mainDeletionQueue.push_function([=]() {
 
@@ -1728,6 +1847,22 @@ void Renderer::loadMesh(std::string name, std::string filename) {
 	_meshes[name] = mesh;
 }
 
+void Renderer::addCuboid(std::string name, glm::vec3 size) {
+	auto vertices = createCuboid(size.x, size.y, size.z);
+	std::vector<uint32_t> indices;
+	for (uint32_t i = 0; i < vertices.size(); i++) {
+		indices.push_back(i);
+	}
+
+	Mesh mesh{
+		._vertices = vertices,
+		._indices = indices
+	};
+	uploadMesh(mesh);
+	
+	_meshes[name] = mesh;
+}
+
 void Renderer::loadLight(glm::vec3 pos, glm::vec3 color, float radius) {
 	PointLightObject light{
 		.lightPos = pos,
@@ -1824,6 +1959,7 @@ void Renderer::uploadMesh(Mesh& mesh) {
 template <typename T>
 void Renderer::createStageAndCopyBuffer(std::span<T> data, AllocatedBuffer& bufferLocation, VkBufferUsageFlags usageFlags) {
 	const size_t bufferSize = data.size() * sizeof(T);
+	// std::cout << std::format("Buffer size: {}\n", bufferSize);
 
 	//allocate staging buffer
 	VkBufferCreateInfo stagingBufferInfo = {
@@ -2178,6 +2314,43 @@ glm::mat4 perspectiveProjectionMatrix(float fovY, float aspect, float zNear, flo
 	
 }
 
+float linearizeDepth(float d,float zNear,float zFar) {
+	float depthRange = 2.0 * d - 1.0;
+	float linear = 2.0 * zNear * zFar / (zFar + zNear - depthRange * (zFar - zNear));
+	return linear;
+    return zNear * zFar / (zFar + d * (zNear - zFar));
+}
+
+uint32_t getDepthSlice(float depth, float depthSlices, float zNear, float zFar) {
+
+	// take these as input?
+	// float zNear = 0.1;
+	// float zFar = 200.0;
+	//float depthSlices = 24;
+
+	float linearDepth = linearizeDepth(depth, zNear, zFar);
+	std::cout << std::format("Linearized depth: {}", linearDepth);
+	float scale = depthSlices/log(zFar/zNear);
+	float bias = (depthSlices*log(zNear))/log(zFar/zNear);
+
+	return log(linearDepth) * scale - bias;
+
+
+	float a = depthSlices / log(zFar/zNear);
+
+	float b = (depthSlices * log(zNear))/(log(zFar/zNear));
+
+	return int(log(linearDepth) * a - b);
+
+	//return int(linearDepth * 24);
+}
+
+std::pair<float, float> getDepthFromSlice(float zNear, float zFar, uint32_t slice, uint32_t slices) {
+	float tileNear  = -zNear * pow(zFar/zNear, slice/(float)slices);
+    float tileFar   = -zNear * pow(zFar/zNear, (slice + 1)/(float)slices);
+	return {tileNear, tileFar};
+}
+
 void Renderer::draw(glm::vec3 camDir, Input* input) {
 
 	ImGui_ImplVulkan_NewFrame();
@@ -2198,8 +2371,8 @@ void Renderer::draw(glm::vec3 camDir, Input* input) {
 		std::cout << "vkAcquireNextImageKHR timed out" << std::endl;
 	}
 
-	if (result != VK_SUCCESS) {
-		std::cout << "vkAcquireNextImageKHR returned: " << result;
+	if (result != VK_SUCCESS && result != VK_TIMEOUT && result != VK_SUBOPTIMAL_KHR) {
+		std::cout << "vkAcquireNextImageKHR returned: " << result << std::endl;
 	}
 
 	//now that we are sure that the commands finished executing, we can safely reset the command buffer to begin recording again.
@@ -2305,7 +2478,23 @@ void Renderer::draw(glm::vec3 camDir, Input* input) {
 	glm::mat4 inverseCamProj;
 	camProj = perspectiveProjectionMatrix(glm::radians(fov), 1600.f / 900.f, zNear, zFar, &inverseCamProj);
 
-	mapData(_renderables, camView, camProj, sceneParameters, _pointLights);
+	
+
+	// for (int i = 0; i < 24; i++) {
+	// 	auto [depthNear, depthFar] = getDepthFromSlice(zNear, zFar, i, 24);
+	// 	int depthSlice = getDepthSlice(depthNear, 24, zNear, zFar);
+	// 	if(depthSlice != i) {
+	// 		std::cout << std::format("Depth Slice: {} gives: {} for Near depth of: {}\n", i, depthSlice, depthNear);
+	// 	}
+	// 	depthSlice = getDepthSlice(depthFar, 24, zNear, zFar);
+	// 	if(depthSlice != i) {
+	// 		std::cout << std::format("Depth Slice: {} gives: {} for Far depth of: {}\n", i, depthSlice, depthFar);
+	// 	}
+	// }
+
+
+
+	mapData(_renderables, camView, camProj, inverseCamProj, sceneParameters, _pointLights);
 
 	drawPrePass(cmd, _renderables, sceneParameters, swapchainImageIndex);
 
@@ -2313,6 +2502,11 @@ void Renderer::draw(glm::vec3 camDir, Input* input) {
 		genDepthPyramid(cmd, swapchainImageIndex);
 
 	cullLightsPass(cmd, _pointLights, camView, camProj, swapchainImageIndex, zNear, zFar);
+
+	// {
+	// 	glm::vec4 lightInViewSpace = camView * glm::vec4(_pointLights[0].lightPos, 1);
+	// 	std::cout << std::format("Light in view space: {}, {}, {}, {}\n", lightInViewSpace.x, lightInViewSpace.y, lightInViewSpace.z, lightInViewSpace.w);
+	// }
 
 	clusterLightsPass(cmd, true, camView, inverseCamProj, zNear, zFar);
 
@@ -2405,8 +2599,7 @@ void Renderer::sortObjects(std::span<RenderObject> renderObjects) {
 		});
 }
 
-void Renderer::mapData(std::span<RenderObject> renderObjects, glm::mat4 view, glm::mat4 proj, GPUSceneData sceneParameters, std::span<PointLightObject> lights) {
-	
+void Renderer::mapData(std::span<RenderObject> renderObjects, glm::mat4 view, glm::mat4 proj, glm::mat4 inverseProj, GPUSceneData sceneParameters, std::span<PointLightObject> lights) {
 	
 	int frameIndex = _frameNumber % FRAME_OVERLAP;
 	int frameOffset = (padUniformBufferSize(sizeof(GPUCameraData)) + padUniformBufferSize(sizeof(GPUSceneData))) * frameIndex;
@@ -2416,7 +2609,8 @@ void Renderer::mapData(std::span<RenderObject> renderObjects, glm::mat4 view, gl
 	GPUCameraData camData{
 		.view = view,
 		.proj = proj,
-		.viewproj = proj * view
+		.viewproj = proj * view,
+		.inverseProj = inverseProj
 	};
 
 	//Copy camera and scene parameters into buffer
@@ -2721,7 +2915,7 @@ void Renderer::clusterLightsPass(VkCommandBuffer cmd, bool findClusters, glm::ma
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1, &preTransferBarrier, 0, nullptr);
 
 	
-	//vkCmdFillBuffer(cmd, getCurrentFrame().lightIndicesBuffer._buffer, 0, 4, 0);
+	vkCmdFillBuffer(cmd, getCurrentFrame().lightIndicesBuffer._buffer, 0, 4, 0);
 
 	auto transferBarrier = vkinit::bufferBarrier(getCurrentFrame().lightIndicesBuffer._buffer, _graphicsQueueFamily, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT);
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &transferBarrier, 0, nullptr);
@@ -2743,12 +2937,16 @@ void Renderer::clusterLightsPass(VkCommandBuffer cmd, bool findClusters, glm::ma
 		1, 1, &getCurrentFrame().objectDescriptor,
 		0, nullptr);
 
+	static bool find_clusters = true;
+
 	GPUClusterPushConstant constants {
-		.findClusters = true,
+		.findClusters = find_clusters,
 		.zNear = zNear,
 		.zFar = zFar,
-		.inverseMatrix = inverseMatrix
+		// .viewMatrix = viewMatrix,
+		// .inverseMatrix = inverseMatrix
 	};
+	// find_clusters = false;
 
 	vkCmdPushConstants(cmd, _clusterPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT,
 		0, sizeof(constants), &constants);

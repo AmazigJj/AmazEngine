@@ -1,6 +1,5 @@
 #include "vk_pipeline.h"
 #include <iostream>
-#include <vulkan/vulkan_core.h>
 
 namespace amaz::eng {
 
@@ -89,7 +88,8 @@ namespace amaz::eng {
 			.depthBiasEnable = _depthBias,
 			.depthBiasConstantFactor = _depthBiasConstant,
 			.depthBiasClamp = _depthBiasClamp,
-			.depthBiasSlopeFactor = _depthBiasSlope
+			.depthBiasSlopeFactor = _depthBiasSlope,
+			.lineWidth = 1.0
 		};
 
 		VkPipelineMultisampleStateCreateInfo multisamplingInfo {
@@ -257,8 +257,9 @@ namespace amaz::eng {
 		_minSampleShading = minSampleShading;
 		return *this;
 	}
+
 	PipelineBuilder& PipelineBuilder::disableSampleShading() {
-		_sampleShading = true;
+		_sampleShading = false;
 		_minSampleShading = 0;
 		return *this;
 	}

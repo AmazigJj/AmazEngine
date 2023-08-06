@@ -1,5 +1,4 @@
 #include "vk_descriptor.h"
-#include <vulkan/vulkan_core.h>
 #include <iostream>
 
 namespace amaz::eng {

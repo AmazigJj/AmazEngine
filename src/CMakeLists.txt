@@ -4,11 +4,10 @@ add_executable (AmazEngine "AmazEngine.cpp" "renderer/vk_initializers.cpp" "rend
 
 set_target_properties(AmazEngine PROPERTIES CXX_STANDARD 20)
 
-find_package(Vulkan REQUIRED)
-message("VULKAN VERSION: " ${Vulkan_VERSION})
+# find_package(Vulkan REQUIRED)
+# message("VULKAN VERSION: " ${Vulkan_VERSION})
 
-target_link_libraries(AmazEngine PUBLIC Vulkan::Vulkan vk-bootstrap::vk-bootstrap glm::glm SDL2::SDL2 SDL2::SDL2main stb_image tinyobjloader VulkanMemoryAllocator imgui nlohmann_json::nlohmann_json tinygltf)
-
+target_link_libraries(AmazEngine PUBLIC volk::volk vk-bootstrap::vk-bootstrap glm::glm SDL2::SDL2 SDL2::SDL2main stb_image tinyobjloader VulkanMemoryAllocator imgui nlohmann_json::nlohmann_json tinygltf)
 add_dependencies(AmazEngine Shaders AmazEngineAssets)
 
 

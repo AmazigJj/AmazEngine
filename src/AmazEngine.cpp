@@ -14,7 +14,7 @@
 #include "physics/Physics.h"
 #include "glm/glm.hpp"
 #include <variant>
-
+#include <random>
 
 using json = nlohmann::json;
 
@@ -55,6 +55,18 @@ int main(int argc, char* argv[]) {
 	amaz::Physics physics;
 
 	loadScene("test", renderer, physics);
+
+	// {
+	// 	std::random_device dev;
+    // 	std::mt19937 rng(dev());
+    // 	std::uniform_int_distribution<std::mt19937::result_type> dist(1,10000); // distribution in range [1, 6]
+	// 	for (int i = 0; i<5000; i++) {
+	// 		renderer.addCuboid(std::format("CUBE {}", i),
+	// 		{dist(rng)/1000.f, dist(rng)/1000.f, dist(rng)/1000.f});
+	// 		renderer.registerRenderObject(std::format("CUBE {}", i), "defaultmesh",
+	// 		{dist(rng)/100.f - 50.f, dist(rng)/100.f - 50.f, dist(rng)/100.f - 50.f});
+	// 	}
+	// }
 
 	bool running = true;
 
@@ -127,6 +139,7 @@ int main(int argc, char* argv[]) {
 
 			nextRenderFrame += std::chrono::microseconds(FRAME_LIMIT ? 1000000/FRAME_LIMIT : frametime);
 		}
+
 	}
 
 	return 0;

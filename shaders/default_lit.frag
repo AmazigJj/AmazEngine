@@ -5,6 +5,7 @@ layout(set = 0, binding = 0) uniform CameraBuffer{
 	mat4 view;
 	mat4 proj;
 	mat4 viewproj;
+	mat4 inverseproj;
 } camData;
 
 struct ShadowMapData {
@@ -130,6 +131,7 @@ vec3 calcDirLight(const DirLight dirLight, const vec3 fragPos, const vec3 normal
 float dirShadowCalculation(const DirLight dirLight, const vec3 fragPos, const vec3 normal);
 vec3 calcPointLight(const PointLight light, const vec3 fragPos, const vec3 normal, const vec3 viewDir);
 float pointShadowCalculation(const PointLight light, const vec3 fragPos, const vec3 normal);
+vec3 getColorFromClusterLightsCount(const uint lightCount);
 
 float pointShadowTest(const PointLight light, const vec3 fragPos, const vec3 normal) {
 	vec3 fragToLight = fragPos - light.lightPos;
@@ -211,7 +213,6 @@ vec3 displayDepthSlices(float depth) {
 	}
 }
 
-
 uvec3 getClusterPos(vec3 fragCoord) {
 	uint clusterZVal = getDepthSlice(fragCoord.z, 24);
     uvec3 clusters = uvec3(floor((fragCoord.xy * vec2(16, 8)) / vec2(1600, 900) ), clusterZVal);
@@ -226,10 +227,6 @@ uint getClusterIndex(vec3 fragCoord){
     return clusterIndex;
 }
 
-// uvec3 getClusterPosFromIndex(uint index) {
-
-// }
-
 void main() {
 
 	vec3 norm = normalize(Normal);
@@ -243,9 +240,6 @@ void main() {
 
 	for(int i = 0; i < dirLightBuffer.count; i++)
 		color += calcDirLight(dirLightBuffer.lights[i], FragPos, norm, viewDir);
-
-	// for(int i = 0; i < pointLightBuffer.count; i++)
-	// 	color += calcPointLight(pointLightBuffer.lights[i], FragPos, norm, viewDir);
 
 	int lightCount = 0;
 
@@ -295,6 +289,10 @@ void main() {
 	//color = displayDepthSlices(gl_FragCoord.z);
 
 	//color = vec3((clusterIndex % 16) / 16.0, ((clusterIndex / 16) % 8) / 8.0, 0);
+
+	//color = getColorFromClusterLightsCount(cluster.count)/256;
+	//color = vec3(clusterPos.x / 16, clusterPos.y / 8, clusterPos.z / 24);
+	//color = vec3(gl_FragCoord.xy / vec2(1600, 900), 0);
 	outFragColor = vec4(color, 1.0);
 
 }
@@ -399,6 +397,7 @@ vec3 calcPointLight(const PointLight light, const vec3 fragPos, const vec3 norma
     specular *= attenuation;
 
 	float shadow = pointShadowCalculation(light, fragPos, normal);
+	//float shadow = 0.0;
 
     return (ambient + (1.0 - shadow) * (diffuse + specular));
 }
@@ -441,28 +440,13 @@ float sampleShadow(const ShadowMapData shadowMapData, const vec2 pos) {
 	if ((pos.x >= 1.0 || pos.x < 0.0) || (pos.y >= 1.0 || pos.y < 0.0)) {
 		return 1.0;
 	}
-	vec2 mapCoords = ((pos * shadowMapData.shadowMapSize)																// Convert [0, 1] to [0, mapSize]
-					 + vec2(shadowMapData.shadowMapX, shadowMapData.shadowMapY))								// Move to tile within the shadow atlas
-					 / 8; 																// Convert [0, 8] to [0, 1]
+	vec2 mapCoords = ((pos * shadowMapData.shadowMapSize)                           // Convert [0, 1] to [0, mapSize]
+	                 + vec2(shadowMapData.shadowMapX, shadowMapData.shadowMapY))    // Move to tile within the shadow atlas
+	                 / 8;                                                           // Convert [0, 8] to [0, 1]
 
 	return texture(shadowMap, mapCoords).r;
+	//return mapCoords.x * mapCoords.y;
 }
-
-// float sampleShadow(const int face, const vec2 pos) {
-
-// 	if ((pos.x >= 1.0 || pos.x < 0.0) || (pos.y >= 1.0 || pos.y < 0.0)) {
-// 		return 1.0;
-// 	}
-// 	vec2 mapCoords = ((pos)																// Convert [0, 1] to [0, mapSize]
-// 					 + vec2(face + 1, 0))												// Move to tile within the shadow atlas
-// 					 / 8; 																// Convert [0, 8] to [0, 1]
-	
-// 	//mapCoords = (pos + vec2(2, 0)) / 8;
-
-// 	//mapCoords = pos / 8;
-
-// 	return texture(shadowMap, mapCoords).r;
-// }
 
 float sampleCubeShadow(const PointLight light, const vec3 v) {
 	int face;
@@ -497,4 +481,20 @@ vec2 sampleCube(const vec3 v, out int faceIndex) {
 		uv = vec2(v.x < 0.0 ? v.z : -v.z, -v.y);
 	}
 	return uv * ma + 0.5;
+}
+
+vec3 getColorFromClusterLightsCount(const uint lightCount) {
+	switch (lightCount) {
+		case 0: return vec3(66, 78, 245);
+		case 1: return vec3(66, 132, 245);
+		case 2: return vec3(66, 188, 245);
+		case 3: return vec3(66, 245, 230);
+		case 4: return vec3(66, 245, 179);
+		case 5: return vec3(66, 245, 105);
+		case 6: return vec3(111, 245, 66);
+		case 7: return vec3(227, 245, 66);
+		case 8: return vec3(245, 209, 66);
+		case 9: return vec3(245, 158, 66);
+	}
+	return vec3(245, 66, 66);
 }

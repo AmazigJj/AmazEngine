@@ -1,8 +1,9 @@
 #pragma once
 
 #include <iostream>
+#include <volk.h>
+#define VK_NO_PROTOTYPES
 #include <vk_mem_alloc.h>
-#include <vulkan/vulkan.h>
 #include <SDL.h>
 #include <SDL_vulkan.h>
 #include <VkBootstrap.h>
@@ -20,7 +21,6 @@
 #include <backends/imgui_impl_vulkan.h>
 #include <stb_image.h>
 #include <optional>
-#include <vulkan/vulkan_core.h>
 #include <unordered_map>
 
 #include "vk_mesh.h"
@@ -200,7 +200,7 @@ public:
 		VkFormat depthFormat, VkAttachmentLoadOp depthLoadOp, VkAttachmentStoreOp depthStoreOp);
 
 	void draw(glm::vec3 camDir, Input* input);
-	void mapData(std::span<RenderObject> renderObjects, glm::mat4 camView, glm::mat4 camProj, GPUSceneData sceneParameters, std::span<PointLightObject> lights);
+	void mapData(std::span<RenderObject> renderObjects, glm::mat4 camView, glm::mat4 camProj, glm::mat4 inverseProj, GPUSceneData sceneParameters, std::span<PointLightObject> lights);
 	GPUPointLight generatePointLight(PointLightObject light, uint32_t tile);
 	glm::mat4 genCubeMapViewMatrix(uint8_t face, glm::vec3 lightPos);
 	void drawObjects(VkCommandBuffer cmd, std::span<RenderObject> renderObjects, glm::vec3 camPos, glm::vec3 camDir, GPUSceneData sceneParameters, std::span<PointLightObject> lights);
@@ -250,6 +250,8 @@ public:
 	void createGPUImage(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect, bool cubemap, AllocatedImage& image, VkImageView& imageView, bool destroy = true);
 	VkFramebuffer createFrameBuffer(uint32_t width, uint32_t height, std::span<VkImageView> attachments, VkRenderPass renderPass, bool destroy = true);
 	VkFramebuffer createShadowFrameBuffer(uint32_t width, uint32_t height, AllocatedImage& shadowDepthImage, VkImageView& shadowDepthImageView, bool cubemap);
+
+	void addCuboid(std::string name, glm::vec3 size);
 
 
 	/*

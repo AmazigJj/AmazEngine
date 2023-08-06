@@ -1,4 +1,5 @@
 #version 460
+//#extension GL_EXT_debug_printf : enable
 layout (local_size_x = 16, local_size_y = 8, local_size_z = 1) in;
 
 struct ShadowMapData {
@@ -30,6 +31,13 @@ struct DirLight {
 
 	ShadowMapData shadowMapData;
 };
+
+layout(set = 0, binding = 0) uniform CameraBuffer{
+	mat4 view;
+	mat4 proj;
+	mat4 viewproj;
+	mat4 inverseproj;
+} camData;
 
 //all directional lights
 layout(std140,set = 1, binding = 1) readonly buffer DirLightBuffer {
@@ -72,8 +80,8 @@ layout(std140,set = 1, binding = 6) buffer lightIndexBuffer {
 layout( push_constant ) uniform PushConstants {
 	bool findClusters;
 	float zNear, zFar;
-	mat4 viewMatrix;
-	mat4 inverseMatrix; // Needed if findClusters == true
+	//mat4 viewMatrix;
+	//mat4 inverseMatrix; // Needed if findClusters == true
 } consts;
 
 // test light vs cluster functions
@@ -95,9 +103,9 @@ void main() {
 						(gl_GlobalInvocationID.z * 16 * 8);
 
 	if (consts.findClusters) {
-		vec3 clusterPos = vec3(	gl_GlobalInvocationID.x / 16,
-						gl_GlobalInvocationID.y / 8,
-						gl_GlobalInvocationID.z / 24);
+		vec3 clusterPos = vec3(	gl_GlobalInvocationID.x / 16.0,
+						gl_GlobalInvocationID.y / 8.0,
+						gl_GlobalInvocationID.z / 24.0);
 		findCluster(clusterIndex, clusterPos);
 	}
 
@@ -114,7 +122,7 @@ void main() {
 		if (activeLight.type == 1){
 			PointLight light = pointLightBuffer.lights[activeLight.index];
 
-			vec3 pos = (consts.viewMatrix * vec4(light.lightPos, 1.0)).rgb;
+			vec3 pos = (camData.view * vec4(light.lightPos, 1.0)).rgb;
 
 			if (testSphereAABB(pos, light.radius, cluster.maxPoint, cluster.minPoint)) {
 				clusterLights[clusterLightCount] = i;
@@ -136,6 +144,7 @@ void main() {
 
 //Checking for intersection given a cluster AABB and a sphere
 bool testSphereAABB(vec3 pos, float radius, vec3 aabbMin, vec3 aabbMax) {
+	return true;
     float sqDist = sqDistPointAABB(pos, aabbMin, aabbMax);
 
     return sqDist <= (radius * radius);
@@ -165,16 +174,16 @@ void findCluster(uint clusterIndex, vec3 clusterPos) {
 
 	//Calculating the min and max point in screen space
 	vec3 clusterMin = clusterPos;
-	vec3 clusterMax = clusterPos + vec3(1/16, 1/8, 1/24);
+	vec3 clusterMax = clusterPos + vec3(1.0/16, 1.0/8, 1.0/24);
 
 	//Pass min and max to view space
-	vec3 minPoint = screenToView(vec4(clusterMin.xy, -1.0, 1.0), consts.inverseMatrix).xyz;
-	vec3 maxPoint = screenToView(vec4(clusterMax.xy, -1.0, 1.0), consts.inverseMatrix).xyz;
+	vec3 minPoint = screenToView(vec4(clusterMin.xy, -1.0, 1.0), camData.inverseproj).xyz;
+	vec3 maxPoint = screenToView(vec4(clusterMax.xy, -1.0, 1.0), camData.inverseproj).xyz;
 
 	//Near and far values of the cluster in view space
     //We use equation (2) directly to obtain the tile values
-	float tileNear  = -consts.zNear * pow(consts.zFar/consts.zNear, clusterMin.z/24.0);
-    float tileFar   = -consts.zNear * pow(consts.zFar/consts.zNear, clusterMax.z/24.0);
+	float tileNear  = -consts.zNear * pow(consts.zFar/consts.zNear, clusterMin.z);
+    float tileFar   = -consts.zNear * pow(consts.zFar/consts.zNear, clusterMax.z);
 
 	//Finding the 4 intersection points made from each point to the cluster near/far plane
 	vec3 minPointNear = lineIntersectionToZPlane(eyePos, minPoint, tileNear);
