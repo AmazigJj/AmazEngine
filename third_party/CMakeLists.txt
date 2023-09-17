@@ -34,6 +34,7 @@ if(imgui_ADDED)
 		${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl.cpp)
 	add_library(imgui STATIC ${imgui_sources})
 	target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR})
+    target_compile_definitions(imgui PUBLIC IMGUI_IMPL_VULKAN_NO_PROTOTYPES)
 	target_link_libraries(imgui PRIVATE volk::volk SDL2::SDL2)
 endif()
 

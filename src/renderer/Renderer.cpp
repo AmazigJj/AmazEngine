@@ -178,6 +178,8 @@ void Renderer::initVulkan(int verMajor, int verMinor, std::string appName) {
 	std::cout << "a\n";
 
 	VmaVulkanFunctions VmaVulkanFunctions = {
+        .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
+        .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
 		.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties,
 		.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties,
 		.vkAllocateMemory = vkAllocateMemory,
@@ -1638,11 +1640,11 @@ void Renderer::registerMaterial(std::string matTemplate, std::string name, std::
 void Renderer::initImgui() {
 
 	
-	// ImGui_ImplVulkan_LoadFunctions([](const char *function_name, void *vulkan_instance) {
-    // 	return vkGetInstanceProcAddr(*(reinterpret_cast<VkInstance *>(vulkan_instance)), function_name);
-  	// }, &_instance);
+	ImGui_ImplVulkan_LoadFunctions([](const char *function_name, void *vulkan_instance) {
+    	return vkGetInstanceProcAddr((reinterpret_cast<VkInstance>(vulkan_instance)), function_name);
+  	}, _instance);
 
-	// std::cout << "IMGUI LOADED FUNCTIONS\n";
+	std::cout << "IMGUI LOADED FUNCTIONS\n";
 
 
 	// create descriptor pool for IMGUI
