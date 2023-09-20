@@ -7,7 +7,7 @@ project ("AmazEngine")
 include(cmake/CPM.cmake)
 
 find_package(Vulkan)
-message("glsl validator " ${GLSL_VALIDATOR})
+find_program(glslc_executable NAMES glslc HINTS Vulkan::glslc)
 
 function(add_shaders target_name)
     foreach(GLSL ${ARGN})
@@ -21,7 +21,7 @@ function(add_shaders target_name)
       ##execute glslang command to compile that specific shader
       add_custom_command(
         OUTPUT ${SPIRV}
-        COMMAND ${Vulkan_GLSLC_EXECUTABLE} ${GLSL} -o ${SPIRV}
+        COMMAND ${glslc_executable} ${GLSL} -o ${SPIRV}
         DEPENDS ${GLSL})
       list(APPEND SPIRV_BINARY_FILES ${SPIRV})
     endforeach(GLSL)
