@@ -405,3 +405,37 @@ VkImageMemoryBarrier vkinit::imageBarrier(VkImage image, uint32_t queue, VkAcces
 		.subresourceRange = subResourceRange
 	};
 }
+
+VkRenderingAttachmentInfo vkinit::renderingAttachmentInfo(VkImageView imageView, VkImageLayout imageLayout, 
+    VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp, VkClearValue clearValue) {
+    
+    return {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
+        .pNext = nullptr,
+        
+        .imageView = imageView,
+        .imageLayout = imageLayout,
+        .loadOp = loadOp,
+        .storeOp = storeOp,
+        .clearValue = clearValue
+    };
+}
+
+VkRenderingInfo vkinit::renderingInfo(std::span<VkRenderingAttachmentInfo> colorAttachments, VkRenderingAttachmentInfo* depthAttachment,
+    VkRenderingAttachmentInfo* stencilAttachment, VkRect2D renderArea) {
+    
+    return {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
+        .pNext = nullptr,
+        
+        .flags = 0,
+        .renderArea = renderArea,
+        .layerCount = 1,
+        .viewMask = 0,
+        .colorAttachmentCount = (uint32_t)colorAttachments.size(),
+        .pColorAttachments = colorAttachments.data(),
+        .pDepthAttachment = depthAttachment,
+        .pStencilAttachment = stencilAttachment
+    };
+}
+

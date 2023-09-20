@@ -88,11 +88,17 @@ public:
 	bool _sampleShading = false;
 	float _minSampleShading = 0;
 
-	VkPipelineLayout _pipelineLayout;
+	VkPipelineLayout _pipelineLayout = nullptr;
 
 	VkPipelineDepthStencilStateCreateInfo _depthStencil;
+    
+    std::vector<VkFormat> _colorFormats;
+    VkFormat _depthFormat = VK_FORMAT_UNDEFINED;
+    VkFormat _stencilFormat = VK_FORMAT_UNDEFINED;
+    
+    VkRenderPass _renderPass = VK_NULL_HANDLE;
 
-	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
+	VkPipeline build_pipeline(VkDevice device);
 
 	PipelineBuilder& addShader(ShaderStageInfo shader);
 	PipelineBuilder& clearShaders();
@@ -120,6 +126,11 @@ public:
 	PipelineBuilder& disableSampleShading();
 	PipelineBuilder& setLayout(VkPipelineLayout layout);
 	PipelineBuilder& setDepthStencilInfo(VkPipelineDepthStencilStateCreateInfo depthStencil);
+    PipelineBuilder& setRenderPass(VkRenderPass renderPass);
+    PipelineBuilder& addColorFormat(VkFormat format);
+    PipelineBuilder& clearColorFormat();
+    PipelineBuilder& setDepthFormat(VkFormat format);
+    PipelineBuilder& setStencilFormat(VkFormat format);
 
 };
 

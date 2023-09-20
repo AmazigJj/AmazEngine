@@ -1,9 +1,10 @@
 #include "vk_pipeline.h"
 #include <iostream>
+#include <vulkan/vulkan_core.h>
 
 namespace amaz::eng {
 
-	VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass) {
+	VkPipeline PipelineBuilder::build_pipeline(VkDevice device) {
 		//make viewport state from our stored viewport and scissor.
 		//at the moment we won't support multiple viewports or scissors
 		VkPipelineViewportStateCreateInfo viewportState = {
@@ -101,12 +102,22 @@ namespace amaz::eng {
 			.sampleShadingEnable = _sampleShading,
 			.minSampleShading = _minSampleShading
 		};
+        
+        VkPipelineRenderingCreateInfo pipeline_rendering_create_info {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
+            .pNext = nullptr,
+            .viewMask = 0,
+            .colorAttachmentCount = (uint32_t)_colorFormats.size(),
+            .pColorAttachmentFormats = _colorFormats.data(),
+            .depthAttachmentFormat = _depthFormat,
+            .stencilAttachmentFormat = _stencilFormat
+        };
 
 		//build the actual pipeline
 		//we now use all of the info structs we have been writing into this one to create the pipeline
 		VkGraphicsPipelineCreateInfo pipelineInfo = {
 			.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-			.pNext = nullptr,
+			.pNext = &pipeline_rendering_create_info,
 
 			.stageCount = (uint32_t)shaderStageInfos.size(),
 			.pStages = shaderStageInfos.data(),
@@ -119,7 +130,7 @@ namespace amaz::eng {
 			.pColorBlendState = &colorBlending,
 			.pDynamicState = &dynamicState,
 			.layout = _pipelineLayout,
-			.renderPass = pass,
+			.renderPass = _renderPass,
 			.subpass = 0,
 			.basePipelineHandle = VK_NULL_HANDLE
 		};
@@ -268,11 +279,36 @@ namespace amaz::eng {
 		_pipelineLayout = layout;
 		return *this;
 	}
+    
+    PipelineBuilder& PipelineBuilder::addColorFormat(VkFormat format) {
+        _colorFormats.push_back(format);
+        return *this;
+    }
+    
+    PipelineBuilder& PipelineBuilder::clearColorFormat() {
+        _colorFormats.clear();
+        return *this;
+    }
+    
+    PipelineBuilder& PipelineBuilder::setDepthFormat(VkFormat format) {
+        _depthFormat = format;
+        return *this;
+    }
+    
+    PipelineBuilder& PipelineBuilder::setStencilFormat(VkFormat format) {
+        _stencilFormat = format;
+        return *this;
+    }
 
 	PipelineBuilder& PipelineBuilder::setDepthStencilInfo(VkPipelineDepthStencilStateCreateInfo depthStencil) {
 		_depthStencil = depthStencil;
 		return *this;
 	}
+    
+    PipelineBuilder& PipelineBuilder::setRenderPass(VkRenderPass renderPass) {
+        _renderPass = renderPass;
+        return *this;
+    }
 
 }
 

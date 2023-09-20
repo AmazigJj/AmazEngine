@@ -94,9 +94,6 @@ void Renderer::createWindow(int width, int height, bool fullscreen, bool borderl
 }
 
 void Renderer::initVulkan(int verMajor, int verMinor, std::string appName) {
-
-	
-
 	std::cout << "a\n";
 	volkInitialize();
 	std::cout << "a\n";
@@ -108,13 +105,13 @@ void Renderer::initVulkan(int verMajor, int verMinor, std::string appName) {
 	//make the Vulkan instance, with basic debug features
 	auto vkb_inst = builder.set_app_name(appName.c_str())
 		.set_engine_name("AmazEngine")
-		.request_validation_layers(true)
+		// .request_validation_layers(true)
 		// .add_validation_feature_disable(VK_VALIDATION_FEATURE_DISABLE_ALL_EXT)
-		.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
+		// .add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
 		// .add_validation_disable(VkValidationCheckEXT check)
 		// .set_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 		.require_api_version(verMajor, verMinor, 0)
-		.use_default_debug_messenger()
+		// .use_default_debug_messenger()
 		.build()
 		.value();
 	
@@ -141,7 +138,7 @@ void Renderer::initVulkan(int verMajor, int verMinor, std::string appName) {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
 		.pNext = nullptr,
 		.drawIndirectCount = VK_TRUE,
-		.samplerFilterMinmax = VK_TRUE
+		.samplerFilterMinmax = VK_TRUE,
 	};
 
 
@@ -153,6 +150,7 @@ void Renderer::initVulkan(int verMajor, int verMinor, std::string appName) {
 		.set_surface(_surface)
 		.set_required_features_12(features)
 		.add_desired_extension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME)
+        .add_desired_extension(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)
 		.select()
 		.value();
 
@@ -166,7 +164,24 @@ void Renderer::initVulkan(int verMajor, int verMinor, std::string appName) {
 		.pNext = nullptr,
 		.shaderDrawParameters = VK_TRUE
 	};
-	vkb::Device vkbDevice = deviceBuilder.add_pNext(&shader_draw_parameters_features).build().value();
+    
+    VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_feature {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+        .pNext = nullptr,
+        .dynamicRendering = VK_TRUE,
+    };
+    
+    
+    
+    VkPhysicalDeviceSynchronization2Features syncFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
+        .pNext = nullptr,
+        .synchronization2 = VK_TRUE,
+    };
+    
+    
+    
+	vkb::Device vkbDevice = deviceBuilder.add_pNext(&shader_draw_parameters_features).add_pNext(&dynamic_rendering_feature).add_pNext(&syncFeatures).build().value();
 
 	_physicalDevice = vkbDevice.physical_device;
 	_device = vkbDevice.device;
@@ -321,7 +336,6 @@ void Renderer::initRenderPasseses() {
 }
 
 void Renderer::initMainRenderpass() {
-	// ready to be read for post-processing etc.
 	auto colorAttachment = vkinit::attachmentDescription(_mainFrameFormat, VK_SAMPLE_COUNT_1_BIT,
 		VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
 		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -1076,10 +1090,13 @@ void Renderer::initPipelines() {
 		.setMSAASamples(amaz::eng::MSAASamples::ONE)
 		.disableSampleShading()
 		.setLayout(meshPipelineLayout)
-		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, false, VK_COMPARE_OP_GREATER_OR_EQUAL));
+		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, false, VK_COMPARE_OP_GREATER_OR_EQUAL))
+        // .setRenderPass(_mainRenderPass)
+        .addColorFormat(_mainFrameFormat)
+        .setDepthFormat(_depthFormat);
 
 	std::cout << "Creating meshPipeline!\n";
-	VkPipeline meshPipeline = meshPipelineBuilder.build_pipeline(_device, _mainRenderPass);
+	VkPipeline meshPipeline = meshPipelineBuilder.build_pipeline(_device);
 	std::cout << "Created meshPipeline!\n";
 	createMaterial(meshPipeline, meshPipelineLayout, "defaultmesh");
 	
@@ -1090,9 +1107,12 @@ void Renderer::initPipelines() {
 	prePassPipelineBuilder.clearShaders()
 		.addShader({amaz::eng::ShaderStages::VERTEX, meshVertShader})
 		.setLayout(_prePassPipelineLayout)
-		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
+		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL))
+        // .setRenderPass(_prePassRenderPass)
+        .clearColorFormat()
+        .setDepthFormat(_depthFormat);
 
-	_prePassPipeline = prePassPipelineBuilder.build_pipeline(_device, _prePassRenderPass);
+	_prePassPipeline = prePassPipelineBuilder.build_pipeline(_device);
 	std::cout << "Created prePassPipeline!\n";
 
 	setLayouts = { _globalSetLayout, _objectSetLayout, _singleTextureSetLayout };
@@ -1108,9 +1128,10 @@ void Renderer::initPipelines() {
 		.addShader({amaz::eng::ShaderStages::VERTEX, meshVertShader})
 		.addShader({amaz::eng::ShaderStages::FRAGMENT, texturedMeshShader})
 		.setLayout(texturedPipeLayout)
-		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
+		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL))
+        .setRenderPass(_mainRenderPass);
 	
-	VkPipeline texPipeline = texturedPipelineBuilder.build_pipeline(_device, _mainRenderPass);
+	VkPipeline texPipeline = texturedPipelineBuilder.build_pipeline(_device);
 	std::cout << "Created texturedPipelineBuilder!\n";
 	createMaterial(texPipeline, texturedPipeLayout, "texturedmesh");
 
@@ -1127,9 +1148,10 @@ void Renderer::initPipelines() {
 		.addShader({amaz::eng::ShaderStages::VERTEX, meshVertShader})
 		.addShader({amaz::eng::ShaderStages::FRAGMENT, specularMapShader})
 		.setLayout(specPipeLayout)
-		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL));
+		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_GREATER_OR_EQUAL))
+        .setRenderPass(_mainRenderPass);
 
-	// VkPipeline specPipeline = specPipelineBuilder.build_pipeline(_device, _mainRenderPass);
+	// VkPipeline specPipeline = specPipelineBuilder.build_pipeline(_device);
 	// std::cout << "Created specPipelineBuilder!\n";
 
 	// createMaterial(specPipeline, specPipeLayout, "specularmap");
@@ -1162,6 +1184,25 @@ void Renderer::initPipelines() {
 	VkPipelineLayoutCreateInfo shadowPipelineLayoutCreateInfo = vkinit::pipeline_layout_create_info(shadowSetLayouts, shadowPushConstants);
 
 	vkCreatePipelineLayout(_device, &shadowPipelineLayoutCreateInfo, nullptr, &_shadowPipelineLayout);
+    
+    VertexInputDescription shadowVertexDescription;
+    
+    VkVertexInputBindingDescription mainBinding = {
+        .binding = 0,
+        .stride = sizeof(Vertex),
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+    };
+    
+    shadowVertexDescription.bindings.push_back(mainBinding);
+    
+    VkVertexInputAttributeDescription positionAttribute = {
+        .location = 0,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(Vertex, position)
+    };
+    
+    shadowVertexDescription.attributes.push_back(positionAttribute);
 
 	auto shadowPipelineBuilder = meshPipelineBuilder;
 	shadowPipelineBuilder.clearShaders()
@@ -1171,9 +1212,11 @@ void Renderer::initPipelines() {
 		.setScissor({{ 0, 0 },  {(uint32_t)8192, (uint32_t)8192}})
 		.setCullmode(amaz::eng::CullingMode::FRONT)
 		.setLayout(_shadowPipelineLayout)
-		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL));
+		.setDepthStencilInfo(vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL))
+        .setRenderPass(_shadowRenderPass)
+        .setVertexInput(vkinit::vertex_input_state_create_info(shadowVertexDescription));
 
-	_shadowPipeline = shadowPipelineBuilder.build_pipeline(_device, _shadowRenderPass);
+	_shadowPipeline = shadowPipelineBuilder.build_pipeline(_device);
 	std::cout << "Created shadowPipeline!\n";
 
 	VkShaderModule fullscreenVertShader;
@@ -1226,9 +1269,10 @@ void Renderer::initPipelines() {
 		.setMSAASamples(amaz::eng::MSAASamples::ONE)
 		.disableSampleShading()
 		.setLayout(_tonemapPipelineLayout)
-		.setDepthStencilInfo(vkinit::depth_stencil_create_info(false, false, VK_COMPARE_OP_GREATER_OR_EQUAL));
+		.setDepthStencilInfo(vkinit::depth_stencil_create_info(false, false, VK_COMPARE_OP_GREATER_OR_EQUAL))
+        .setRenderPass(_tonemapRenderPass);
 
-	_tonemapPipeline = tonemapPipelineBuilder.build_pipeline(_device, _tonemapRenderPass);
+	_tonemapPipeline = tonemapPipelineBuilder.build_pipeline(_device);
 	std::cout << "Created tonemapPipeline!\n";
 
 	_mainFrameImagesSets = std::vector<VkDescriptorSet>(_swapchainImages.size());
@@ -2331,7 +2375,7 @@ uint32_t getDepthSlice(float depth, float depthSlices, float zNear, float zFar) 
 	//float depthSlices = 24;
 
 	float linearDepth = linearizeDepth(depth, zNear, zFar);
-	std::cout << std::format("Linearized depth: {}", linearDepth);
+	// std::cout << std::format("Linearized depth: {}", linearDepth);
 	float scale = depthSlices/log(zFar/zNear);
 	float bias = (depthSlices*log(zNear))/log(zFar/zNear);
 
@@ -2351,6 +2395,10 @@ std::pair<float, float> getDepthFromSlice(float zNear, float zFar, uint32_t slic
 	float tileNear  = -zNear * pow(zFar/zNear, slice/(float)slices);
     float tileFar   = -zNear * pow(zFar/zNear, (slice + 1)/(float)slices);
 	return {tileNear, tileFar};
+}
+
+void transitionImages(VkCommandBuffer cmd, VkPipelineStageFlags srcMask, VkPipelineStageFlags dstMask, std::span<VkImageMemoryBarrier> imageBarriers) {
+    vkCmdPipelineBarrier(cmd, srcMask, dstMask, 0, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data());
 }
 
 void Renderer::draw(glm::vec3 camDir, Input* input) {
@@ -2393,38 +2441,6 @@ void Renderer::draw(glm::vec3 camDir, Input* input) {
 	};
 
 	vkBeginCommandBuffer(cmd, &cmdBeginInfo);
-
-	//make a clear-color from frame number. This will flash with a 120*pi frame period.
-	float flash = abs(sin(_frameNumber / 240.f));
-	VkClearValue clearValue{
-		.color = { { 0.0f, 0.0f, 0.0f, 1.0f } }
-	};
-
-	//clear depth at 1
-	VkClearValue depthClear{
-		.depthStencil = {.depth = 0.f}
-	};
-
-	std::array<VkClearValue, 2> clearValues = { clearValue, depthClear };
-
-	//start the main renderpass.
-	//We will use the clear color from above, and the framebuffer of the index the swapchain gave us
-	VkRenderPassBeginInfo rpInfo = {
-		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-		.pNext = nullptr,
-
-		.renderPass = _mainRenderPass,
-		.framebuffer = _mainFramebuffers[swapchainImageIndex],
-		.renderArea{
-			.offset = {0, 0},
-			.extent = { (uint32_t)_winSize.width, (uint32_t)_winSize.height}
-		},
-
-		//connect clear values
-		.clearValueCount = 2,
-		.pClearValues = &clearValues[0]
-	};
-
 	//sortObjects(_renderables);
 
 	glm::vec3 camPos;
@@ -2480,8 +2496,6 @@ void Renderer::draw(glm::vec3 camDir, Input* input) {
 	glm::mat4 inverseCamProj;
 	camProj = perspectiveProjectionMatrix(glm::radians(fov), 1600.f / 900.f, zNear, zFar, &inverseCamProj);
 
-	
-
 	// for (int i = 0; i < 24; i++) {
 	// 	auto [depthNear, depthFar] = getDepthFromSlice(zNear, zFar, i, 24);
 	// 	int depthSlice = getDepthSlice(depthNear, 24, zNear, zFar);
@@ -2493,8 +2507,6 @@ void Renderer::draw(glm::vec3 camDir, Input* input) {
 	// 		std::cout << std::format("Depth Slice: {} gives: {} for Far depth of: {}\n", i, depthSlice, depthFar);
 	// 	}
 	// }
-
-
 
 	mapData(_renderables, camView, camProj, inverseCamProj, sceneParameters, _pointLights);
 
@@ -2513,13 +2525,41 @@ void Renderer::draw(glm::vec3 camDir, Input* input) {
 	clusterLightsPass(cmd, true, camView, inverseCamProj, zNear, zFar);
 
 	static bool hasShadows = false;
-
 	if (!hasShadows) {
 		drawShadowPass(cmd, _renderables, sceneParameters, _pointLights);
 		hasShadows = true;
 	}
+    
+    VkRenderingAttachmentInfo color_attachment_info = vkinit::renderingAttachmentInfo(
+        _mainFrameImageViews[swapchainImageIndex], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+        {.color = {{ 0.0f, 0.0f, 0.0f, 1.0f }}});
+    
+    VkRenderingAttachmentInfo depth_attachment_info = vkinit::renderingAttachmentInfo(
+        _mainFrameDepthImageViews[swapchainImageIndex], VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
+        {.depthStencil = {.depth = 0.f}});
+        
+    VkRenderingInfo renderInfo = vkinit::renderingInfo({&color_attachment_info, 1}, &depth_attachment_info, nullptr, {{0, 0}, {_winSize.width, _winSize.height}});
+    
+    VkImageMemoryBarrier imageBarrier_colorForRender = vkinit::imageBarrier(
+        _mainFrameImages[swapchainImageIndex]._image, VK_QUEUE_FAMILY_IGNORED,
+        VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_ASPECT_COLOR_BIT);
+    VkImageMemoryBarrier imageBarrier_depthForRender = vkinit::imageBarrier(
+        _mainFrameDepthImages[swapchainImageIndex]._image, VK_QUEUE_FAMILY_IGNORED,
+        VK_ACCESS_NONE, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_ASPECT_DEPTH_BIT
+    );
+    
+    std::array<VkImageMemoryBarrier, 2> imageBarriers = {imageBarrier_colorForRender, imageBarrier_depthForRender};
 
-	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+    transitionImages(cmd, VK_PIPELINE_STAGE_NONE, VK_PIPELINE_STAGE_NONE, imageBarriers);
+
+    vkCmdBeginRendering(cmd, &renderInfo);
+    // vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data());
 
 	VkViewport viewport = {
 		.x = 0.f,
@@ -2541,12 +2581,12 @@ void Renderer::draw(glm::vec3 camDir, Input* input) {
 
 	drawObjects(cmd, _renderables, camPos, camDir, sceneParameters, _pointLights);
 
-	vkCmdEndRenderPass(cmd);
+	// vkCmdEndRenderPass(cmd);
+    vkCmdEndRendering(cmd);
 
 	drawTonemapping(cmd, swapchainImageIndex);
 
 	vkEndCommandBuffer(cmd);
-	
 
 	//prepare the submission to the queue.
 	//we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
@@ -2961,12 +3001,6 @@ void Renderer::clusterLightsPass(VkCommandBuffer cmd, bool findClusters, glm::ma
 }
 
 void Renderer::drawPrePass(VkCommandBuffer cmd, std::span<RenderObject> renderObjects, GPUSceneData sceneParameters, uint32_t frameIndex) {
-	VkClearValue depthClear = {
-		.depthStencil = {
-			.depth = 0.f,
-		}
-	};
-
 	VkViewport viewport = {
 		.x = 0.f,
 		.y = 0.f,
@@ -2980,24 +3014,29 @@ void Renderer::drawPrePass(VkCommandBuffer cmd, std::span<RenderObject> renderOb
 		.offset = {0,0},
 		.extent = { (uint32_t)_winSize.width, (uint32_t)_winSize.height}
 	};
+    
+    VkRenderingAttachmentInfo depth_attachment_info = vkinit::renderingAttachmentInfo(
+        _mainFrameDepthImageViews[frameIndex], VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+        {.depthStencil = {.depth = 0.f}});
+    
+    std::array<VkRenderingAttachmentInfo, 0> colorAttachments;
+    VkRenderingInfo renderInfo = vkinit::renderingInfo(colorAttachments, &depth_attachment_info, nullptr, {{0, 0}, {_winSize.width, _winSize.height}});
+    
+    VkImageMemoryBarrier imageBarrier_depthForRender = vkinit::imageBarrier(
+        _mainFrameDepthImages[frameIndex]._image, VK_QUEUE_FAMILY_IGNORED,
+        VK_ACCESS_NONE, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_ASPECT_DEPTH_BIT
+    );
+    
+    std::array<VkImageMemoryBarrier, 1> imageBarriers{imageBarrier_depthForRender};
 
-	VkRenderPassBeginInfo rpInfo = {
-		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-		.pNext = nullptr,
+    transitionImages(cmd, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, imageBarriers);
 
-		.renderPass = _prePassRenderPass,
-		.framebuffer = _prePassFramebuffers[frameIndex],
-		.renderArea{
-			.offset = {0, 0},
-			.extent = { (uint32_t)_winSize.width, (uint32_t)_winSize.height}
-		},
-
-		//connect clear values
-		.clearValueCount = 1,
-		.pClearValues = &depthClear
-	};
-
-	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+    std::cout << "AAAAA" << std::endl;
+    vkCmdBeginRendering(cmd, &renderInfo);
+    std::cout << "BBBBB" << std::endl;
 
 	vkCmdSetViewport(cmd, 0, 1, &viewport);
 	vkCmdSetScissor(cmd, 0, 1, &scissor);
@@ -3052,7 +3091,7 @@ void Renderer::drawPrePass(VkCommandBuffer cmd, std::span<RenderObject> renderOb
 		//vkCmdDrawIndexedIndirectCount(cmd, getCurrentFrame().indirectBuffer._buffer, indirect_offset, getCurrentFrame().indirectCount._buffer, countOffset, 1000000, draw_stride);
 	}
 
-	vkCmdEndRenderPass(cmd);
+	vkCmdEndRendering(cmd);
 }
 
 void Renderer::drawShadowPass(VkCommandBuffer cmd, std::span<RenderObject> renderObjects, GPUSceneData sceneParameters, std::span<PointLightObject> lights) {

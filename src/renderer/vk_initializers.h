@@ -7,6 +7,7 @@
 #include "vk_mesh.h"
 #include <span>
 #include <vulkan/vulkan_core.h>
+#include <optional>
 
 namespace vkinit {
 
@@ -62,5 +63,11 @@ namespace vkinit {
 
 	VkImageMemoryBarrier imageBarrier(VkImage image, uint32_t queue, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, 
 		VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask);
+        
+    VkRenderingAttachmentInfo renderingAttachmentInfo(VkImageView imageView, VkImageLayout imageLayout, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp,
+        VkClearValue clearValue);
+    
+    VkRenderingInfo renderingInfo(std::span<VkRenderingAttachmentInfo> colorAttachments, VkRenderingAttachmentInfo* depthAttachment,
+        VkRenderingAttachmentInfo* stencilAttachment, VkRect2D renderArea);
 }
 
