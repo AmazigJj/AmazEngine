@@ -26,7 +26,7 @@ Renderer::Renderer(int width, int height) : _window(nullptr, SDL_DestroyWindow) 
 	_actualWinSize.height = height;
 
 	createWindow(width, height, false, false);
-	initVulkan(1, 2, "TestApp");
+	initVulkan(1, 3, "TestApp");
 	initSwapchain(false);
 	std::cout << "SWAPCHAIN INITIALIZED\n";
 	initRenderPasseses();
@@ -121,7 +121,7 @@ void Renderer::initVulkan(int verMajor, int verMinor, std::string appName) {
 	_instance = vkb_inst.instance;
 	_debugMessenger = vkb_inst.debug_messenger;
 
-	volkLoadInstance(_instance);
+	volkLoadInstanceOnly(_instance);
 
 	std::cout << "a\n";
 
